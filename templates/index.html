@@ -604,8 +604,9 @@ async function click(r,c){
 async function jouerCoup(col){
   if(G.fin||G.locked)return;
   G.locked=true;
+  const modeEnvoi = G.gameMode==='hvh' ? '2_joueurs' : G.iaMode;
   const r=await fetch('/api/jouer',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({plateau:G.plateau,col,joueur:G.joueur,historique:G.historique,profondeur:G.profondeur,mode:G.iaMode})});
+    body:JSON.stringify({plateau:G.plateau,col,joueur:G.joueur,historique:G.historique,profondeur:G.profondeur,mode:modeEnvoi})});
   const d=await r.json();if(d.erreur){G.locked=false;return;}
   const jav=G.joueur;G.plateau=d.plateau;G.historique=d.historique;G.nbCoups++;
   G.joueur=jav==='rouge'?'jaune':'rouge';

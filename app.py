@@ -283,6 +283,7 @@ def api_jouer():
     col = data["col"]
     joueur = data["joueur"]
     historique = data.get("historique", [])
+    mode = data.get("mode", "ia_minimax")
 
     ligne = jouer_coup(plat, col, joueur)
     if ligne == -1:
@@ -295,7 +296,7 @@ def api_jouer():
     prediction = "incertaine"
     meilleur = None
 
-    if not vainqueur:
+    if not vainqueur and mode != "2_joueurs":
         prochain = JAUNE if joueur == ROUGE else ROUGE
         poids = calculer_poids_colonnes(plat, prochain)
         prediction = calculer_prediction(plat, prochain)
