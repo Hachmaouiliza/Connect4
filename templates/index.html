@@ -361,12 +361,19 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
           <div class="pc epc" id="pce" onclick="setPC('effacer')">✕ Eff.</div>
         </div>
         <button class="wbtn tb" id="btn-iap" style="display:none" onclick="demanderIA()">🧠 Analyser avec l'IA</button>
+        <button class="wbtn" style="background:linear-gradient(155deg,#1a6b3a,#0d4a27);box-shadow:0 4px 0 #082a17,0 6px 12px rgba(0,0,0,0.4)" id="btn-laisser-ia" onclick="laisserIAJouer()">🤖 Laisser l'IA jouer</button>
         <button class="wbtn" onclick="annulerCoup()">↩ Annuler coup</button>
+
+        <div style="height:1px;background:rgba(255,248,240,0.1);margin:6px 0"></div>
+
         <button class="wbtn rb" onclick="nouvellePartie()">⟳ Nouvelle partie</button>
-        <div style="display:flex;gap:5px">
+        <div style="display:flex;gap:5px;margin-bottom:5px">
           <button class="wbtn jb" style="margin:0;flex:1;font-size:0.72rem" onclick="sauvegarderPartie()">💾 Sauvegarder</button>
           <button class="wbtn rb" style="margin:0;flex:1;font-size:0.72rem" onclick="abandonnerPartie()">🏳️ Abandonner</button>
         </div>
+
+        <div style="height:1px;background:rgba(255,248,240,0.1);margin:6px 0"></div>
+
         <button class="wbtn ob" onclick="document.getElementById('modal-bga').classList.add('show')">📋 Importer BGA</button>
         <button class="wbtn ob" style="background:linear-gradient(155deg,#8e44ad,#6c3483);box-shadow:0 4px 0 #3d1a5e,0 6px 12px rgba(0,0,0,0.4)" onclick="document.getElementById('modal-fichier').classList.add('show')">📂 Importer fichier texte</button>
       </div>
@@ -597,6 +604,19 @@ async function click(r,c){
 async function jouerCoup(col){
   if(G.fin||G.locked)return;
   G.locked=true;
+
+  // CORRECTION : affiche le pion immédiatement sans attendre le serveur
+  let ligneAffichee=-1;
+  for(let r=8;r>=0;r--){
+    if(G.plateau[r][col]===null){
+      G.plateau[r][col]=G.joueur;
+      ligneAffichee=r;
+      break;
+    }
+  }
+  if(ligneAffichee===-1){G.locked=false;return;}
+  refreshBoard();
+
   const r=await fetch('/api/jouer',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({plateau:G.plateau,col,joueur:G.joueur,historique:G.historique,profondeur:G.profondeur,mode:G.iaMode})});
   const d=await r.json();if(d.erreur){G.locked=false;return;}
@@ -607,12 +627,25 @@ async function jouerCoup(col){
   if(G.gameMode==='hvi'&&G.joueur!==G.couleurHumain){
     document.getElementById('tbanner').textContent='IA réfléchit...';
     document.getElementById('tbanner').className='turn-banner ia';
-    // Passe la vraie couleur de l'IA
     const couleurIA=G.couleurHumain==='rouge'?'jaune':'rouge';
     setTimeout(()=>jouerIA(couleurIA),500);
   } else {
     G.locked=false;
   }
+}
+
+function laisserIAJouer(){
+  // Reprend la partie en cours et laisse l'IA jouer pour les deux couleurs
+  if(G.fin)return;
+  G.gameMode='ivi';
+  document.querySelectorAll('[data-gamemode]').forEach(b=>b.classList.remove('active'));
+  document.querySelector('[data-gamemode="ivi"]').classList.add('active');
+  document.getElementById('ia-mode-wrap').style.display='block';
+  document.getElementById('couleur-wrap').style.display='none';
+  // Lance iaVsIa sur le plateau actuel sans reset
+  if(G.timer){clearInterval(G.timer);clearTimeout(G.timer);G.timer=null;}
+  G.locked=false;
+  setTimeout(iaVsIa,600);
 }
 
 async function jouerIA(couleur){
