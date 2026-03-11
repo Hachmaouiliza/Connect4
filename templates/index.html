@@ -604,19 +604,6 @@ async function click(r,c){
 async function jouerCoup(col){
   if(G.fin||G.locked)return;
   G.locked=true;
-
-  // CORRECTION : affiche le pion immédiatement sans attendre le serveur
-  let ligneAffichee=-1;
-  for(let r=8;r>=0;r--){
-    if(G.plateau[r][col]===null){
-      G.plateau[r][col]=G.joueur;
-      ligneAffichee=r;
-      break;
-    }
-  }
-  if(ligneAffichee===-1){G.locked=false;return;}
-  refreshBoard();
-
   const r=await fetch('/api/jouer',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({plateau:G.plateau,col,joueur:G.joueur,historique:G.historique,profondeur:G.profondeur,mode:G.iaMode})});
   const d=await r.json();if(d.erreur){G.locked=false;return;}
