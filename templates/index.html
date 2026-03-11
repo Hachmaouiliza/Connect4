@@ -707,7 +707,7 @@ function setGameMode(btn){
   // Afficher/masquer choix IA et couleur humain
   const avecIA=(G.gameMode==='hvi'||G.gameMode==='ivi');
   document.getElementById('ia-mode-wrap').style.display=avecIA?'block':'none';
-  document.getElementById('couleur-wrap').style.display=(G.gameMode==='hvi')?'flex':'none';
+  document.getElementById('couleur-wrap').style.display=(G.gameMode==='hvi'||G.gameMode==='hvh')?'flex':'none';
   // Mapper vers l'ancien système
   if(G.gameMode==='hvh') G.mode='2_joueurs';
   else if(G.gameMode==='ivi') G.mode='ia_vs_ia';
