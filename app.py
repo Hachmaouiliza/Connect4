@@ -163,7 +163,8 @@ def evaluer_fenetre(fen, pion):
     if fen.count(pion) == 4: score += 100000
     elif fen.count(pion) == 3 and fen.count(None) == 1: score += 500
     elif fen.count(pion) == 2 and fen.count(None) == 2: score += 50
-    if fen.count(adv) == 3 and fen.count(None) == 1: score -= 800
+    if fen.count(adv) == 3 and fen.count(None) == 1: score -= 50000
+    if fen.count(adv) == 2 and fen.count(None) == 2: score -= 100
     return score
 
 def score_position(plat, pion):
