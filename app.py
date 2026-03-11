@@ -163,8 +163,7 @@ def evaluer_fenetre(fen, pion):
     if fen.count(pion) == 4: score += 100000
     elif fen.count(pion) == 3 and fen.count(None) == 1: score += 500
     elif fen.count(pion) == 2 and fen.count(None) == 2: score += 50
-    if fen.count(adv) == 3 and fen.count(None) == 1: score -= 100001
-    if fen.count(adv) == 2 and fen.count(None) == 2: score -= 100
+    if fen.count(adv) == 3 and fen.count(None) == 1: score -= 800
     return score
 
 def score_position(plat, pion):
@@ -216,6 +215,18 @@ def minimax(plat, prof, alpha, beta, maximisant, pion_max=JAUNE):
             if alpha >= beta: break
         return col_res, val
 
+def coup_urgent(plat, couleur):
+    """Retourne le coup à jouer si l'adversaire peut gagner au prochain coup, sinon None"""
+    adv = ROUGE if couleur == JAUNE else JAUNE
+    libres = [c for c in range(COLS) if plat[0][c] is None]
+    for col in libres:
+        temp = copy.deepcopy(plat)
+        jouer_coup(temp, col, adv)
+        v, _ = verifier_victoire(temp)
+        if v == adv:
+            return col  # bloquer ce coup urgent
+    return None
+
 def meilleur_coup_ia(plat, historique, mode='ia_minimax', couleur=JAUNE):
     """CORRECTION : 3 modes séparés, couleur passée partout"""
     libres = [c for c in range(COLS) if plat[0][c] is None]
@@ -224,13 +235,20 @@ def meilleur_coup_ia(plat, historique, mode='ia_minimax', couleur=JAUNE):
     if mode == 'ia_random':
         return random.choice(libres), "random"
 
+    # Vérification urgente : bloquer victoire adversaire immédiate
+    bloc = coup_urgent(plat, couleur)
+
     if mode == 'ia_db':
         coup_memoire = chercher_memoire(historique, couleur)
+        if bloc is not None:
+            return bloc, "blocage"
         if coup_memoire is not None and coup_memoire in libres:
             return coup_memoire, "memoire"
         return random.choice(libres), "random"
 
     # ia_minimax : DB d'abord, minimax en fallback
+    if bloc is not None:
+        return bloc, "blocage"
     coup_memoire = chercher_memoire(historique, couleur)
     if coup_memoire is not None and coup_memoire in libres:
         return coup_memoire, "memoire"
