@@ -105,23 +105,24 @@ def enregistrer_partie(sequence, vainqueur):
         print(f"SQL ERROR: {e}")
 
 def chercher_memoire(historique, couleur=None):
-    """Récupère le meilleur coup depuis la DB selon la couleur"""
+    """CORRECTION : récupère le coup avec le MEILLEUR poids pondéré selon la couleur"""
     sequence = "".join(map(str, historique))
-    # CORRECTION : premier coup = "start", pas ""
-    id_plateau = sequence if sequence else "start"
+    if not sequence: return None
     conn = get_db()
     if not conn: return None
     try:
         cur = conn.cursor()
         if couleur == ROUGE:
+            # Rouge veut minimiser → poids le plus BAS (négatif)
             cur.execute(
                 "SELECT meilleur_coup FROM positions WHERE id_plateau = %s ORDER BY poids ASC LIMIT 1",
-                (id_plateau,)
+                (sequence,)
             )
         else:
+            # Jaune veut maximiser → poids le plus HAUT (positif)
             cur.execute(
                 "SELECT meilleur_coup FROM positions WHERE id_plateau = %s ORDER BY poids DESC LIMIT 1",
-                (id_plateau,)
+                (sequence,)
             )
         r = cur.fetchone()
         cur.close(); conn.close()
@@ -301,7 +302,6 @@ def api_jouer():
     col = data["col"]
     joueur = data["joueur"]
     historique = data.get("historique", [])
-    mode = data.get("mode", "ia_minimax")
 
     ligne = jouer_coup(plat, col, joueur)
     if ligne == -1:
@@ -310,16 +310,6 @@ def api_jouer():
     historique.append(col)
     vainqueur, pions_gagnants = verifier_victoire(plat)
 
-    poids = [0] * COLS
-    prediction = "incertaine"
-    meilleur = None
-
-    if not vainqueur and mode != "2_joueurs":
-        prochain = JAUNE if joueur == ROUGE else ROUGE
-        poids = calculer_poids_colonnes(plat, prochain)
-        prediction = calculer_prediction(plat, prochain)
-        meilleur, _ = meilleur_coup_ia(plat, historique, couleur=prochain)
-
     if vainqueur:
         enregistrer_partie("".join(map(str, historique)), vainqueur)
 
@@ -327,11 +317,27 @@ def api_jouer():
         "plateau": plat,
         "vainqueur": vainqueur,
         "pions_gagnants": pions_gagnants,
-        "poids_colonnes": poids,
-        "prediction": prediction,
-        "meilleur_coup": meilleur,
         "historique": historique,
         "ligne_jouee": ligne
+    })
+
+@app.route("/api/poids", methods=["POST"])
+def api_poids():
+    """Route séparée pour les poids visuels — appelée en arrière-plan"""
+    data = request.json
+    plat = data["plateau"]
+    historique = data.get("historique", [])
+    joueur = data.get("joueur", JAUNE)
+    mode = data.get("mode", "ia_minimax")
+
+    poids = calculer_poids_colonnes(plat, joueur)
+    prediction = calculer_prediction(plat, joueur)
+    meilleur, _ = meilleur_coup_ia(plat, historique, mode=mode, couleur=joueur)
+
+    return jsonify({
+        "poids_colonnes": poids,
+        "prediction": prediction,
+        "meilleur_coup": meilleur
     })
 
 @app.route("/api/ia", methods=["POST"])
