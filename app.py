@@ -105,24 +105,23 @@ def enregistrer_partie(sequence, vainqueur):
         print(f"SQL ERROR: {e}")
 
 def chercher_memoire(historique, couleur=None):
-    """CORRECTION : récupère le coup avec le MEILLEUR poids pondéré selon la couleur"""
+    """Récupère le meilleur coup depuis la DB selon la couleur"""
     sequence = "".join(map(str, historique))
-    if not sequence: return None
+    # CORRECTION : premier coup = "start", pas ""
+    id_plateau = sequence if sequence else "start"
     conn = get_db()
     if not conn: return None
     try:
         cur = conn.cursor()
         if couleur == ROUGE:
-            # Rouge veut minimiser → poids le plus BAS (négatif)
             cur.execute(
                 "SELECT meilleur_coup FROM positions WHERE id_plateau = %s ORDER BY poids ASC LIMIT 1",
-                (sequence,)
+                (id_plateau,)
             )
         else:
-            # Jaune veut maximiser → poids le plus HAUT (positif)
             cur.execute(
                 "SELECT meilleur_coup FROM positions WHERE id_plateau = %s ORDER BY poids DESC LIMIT 1",
-                (sequence,)
+                (id_plateau,)
             )
         r = cur.fetchone()
         cur.close(); conn.close()
