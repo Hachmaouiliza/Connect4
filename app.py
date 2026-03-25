@@ -399,11 +399,10 @@ def api_pinceau():
         col2, _ = minimax(copy.deepcopy(plat), prof, -math.inf, math.inf, True, joueur)
         if col2 is not None: col = col2
         source = "minimax"
-    prediction, nb_tours = calculer_prediction(plat, joueur)
+    prediction = calculer_prediction(plat, joueur)
     return jsonify({
         "meilleur_coup": col,
         "prediction": prediction,
-        "nb_tours": nb_tours,
         "source": source
     })
 
