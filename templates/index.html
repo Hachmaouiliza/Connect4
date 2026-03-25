@@ -204,7 +204,19 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
 .mbtn-modal{background:linear-gradient(155deg,var(--jaune-light),var(--jaune),var(--jaune-dark));border:none;border-radius:12px;padding:11px 26px;font-family:'Fredoka One',cursive;font-size:1rem;color:#4a2c0e;cursor:pointer;box-shadow:0 5px 0 var(--jaune-dark),0 8px 15px rgba(0,0,0,0.4);transition:all .1s;}
 .mbtn-modal:active{transform:translateY(4px);box-shadow:0 1px 0 var(--jaune-dark);}
 
-/* MODALE BGA + FICHIER */
+/* CHEAT MODE */
+.sit-layout{display:flex;gap:20px;width:100%;max-width:1100px;align-items:flex-start;}
+.sit-left{width:220px;flex-shrink:0;display:flex;flex-direction:column;gap:8px;}
+.sit-section{font-size:0.68rem;font-weight:800;color:rgba(255,248,240,0.45);text-transform:uppercase;letter-spacing:0.1em;margin:6px 0 4px;}
+.pcbtn{width:100%;padding:10px;border:2px solid transparent;border-radius:9px;font-family:'Nunito',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s;background:rgba(0,0,0,0.2);color:rgba(255,248,240,0.6);}
+.pcbtn.active{box-shadow:0 0 0 2px white;background:rgba(255,255,255,0.1);color:white;}
+.sit-select{width:100%;background:rgba(0,0,0,0.35);border:2px solid rgba(255,248,240,0.15);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'Nunito',sans-serif;font-size:0.82rem;font-weight:700;outline:none;cursor:pointer;}
+.sit-result{background:linear-gradient(155deg,#002233,#001122);border:2px solid rgba(0,188,212,0.4);border-radius:12px;padding:14px;display:none;}
+.sit-result-coup{font-family:'Fredoka One',cursive;font-size:1.6rem;color:#4dd0e1;text-align:center;margin:6px 0;}
+.abtn{width:100%;padding:11px;border:none;border-radius:9px;font-family:'Fredoka One',cursive;font-size:0.95rem;cursor:pointer;background:linear-gradient(155deg,#00bcd4,#0097a7);color:white;box-shadow:0 4px 0 #006070;transition:all 0.1s;}
+.ebtn{width:100%;padding:9px;border:none;border-radius:9px;font-family:'Fredoka One',cursive;font-size:0.85rem;cursor:pointer;background:linear-gradient(155deg,#c0392b,#922b21);color:white;box-shadow:0 4px 0 #641e16;}
+.sit-board-wrap{flex:1;}
+.sit-cell{aspect-ratio:1;border-radius:50%;cursor:pointer;transition:all 0.15s;background:rgba(26,15,5,0.8);}
 .mbox-large{min-width:500px;max-width:540px;text-align:left;padding:24px 26px;}
 .minput{width:100%;background:rgba(0,0,0,0.35);border:2px solid rgba(255,248,240,0.15);border-radius:8px;padding:8px 11px;color:var(--text);font-family:'Nunito',sans-serif;font-size:0.88rem;font-weight:700;outline:none;transition:border-color 0.2s;}
 .minput:focus{border-color:rgba(255,193,7,0.5);}
@@ -279,6 +291,7 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
 <div class="tabs">
   <button class="tab active" onclick="switchTab('jeu',this)">🎮 Jouer</button>
   <button class="tab" onclick="switchTab('bdd',this)">🗄️ Base de données</button>
+  <button class="tab" onclick="switchTab('situation',this)">🔮 Cheat Mode</button>
 </div>
 
 <!-- ═══ ONGLET JEU ═══ -->
@@ -484,6 +497,52 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
   </div>
 </div>
 
+<!-- ═══ CHEAT MODE ═══ -->
+<div class="tab-content" id="tab-situation">
+  <div class="sit-layout">
+    <div class="sit-left wc">
+      <div style="font-family:'Fredoka One',cursive;font-size:1.1rem;color:var(--jaune);margin-bottom:4px">🔮 Cheat Mode</div>
+      <div style="font-size:0.72rem;color:rgba(255,248,240,0.45);margin-bottom:8px">Reproduis ta position et laisse l'IA te dire quoi jouer.</div>
+
+      <div class="sit-section">Pion à placer</div>
+      <button class="pcbtn active" id="sit-btn-r" onclick="setSitPC('rouge')">🔴 Rouge</button>
+      <button class="pcbtn" id="sit-btn-j" onclick="setSitPC('jaune')">🟡 Jaune</button>
+      <button class="pcbtn" id="sit-btn-e" onclick="setSitPC('effacer')">✕ Effacer</button>
+
+      <div class="sit-section">Analyser</div>
+      <div style="font-size:0.68rem;color:rgba(255,248,240,0.45);margin-bottom:4px">Joueur qui joue</div>
+      <select class="sit-select" id="sit-joueur">
+        <option value="rouge">🔴 Rouge joue</option>
+        <option value="jaune">🟡 Jaune joue</option>
+      </select>
+      <div style="font-size:0.68rem;color:rgba(255,248,240,0.45);margin:8px 0 4px">Profondeur</div>
+      <select class="sit-select" id="sit-prof">
+        <option value="2">2 — Rapide</option>
+        <option value="3">3 — Équilibré</option>
+        <option value="4" selected>4 — Fort</option>
+        <option value="5">5 — Très fort</option>
+        <option value="6">6 — Expert</option>
+      </select>
+      <button class="abtn" onclick="analyserSituation()">🔍 Analyser</button>
+
+      <div class="sit-result" id="sit-result">
+        <div style="font-size:0.68rem;font-weight:800;color:rgba(0,188,212,0.7);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Meilleur coup</div>
+        <div class="sit-result-coup" id="sit-coup">—</div>
+        <div style="font-size:0.72rem;color:rgba(255,248,240,0.5);text-align:center" id="sit-score"></div>
+        <div style="font-size:0.78rem;font-weight:700;text-align:center;margin-top:6px" id="sit-pred"></div>
+      </div>
+
+      <div class="sit-section" style="margin-top:8px">Actions</div>
+      <button class="ebtn" onclick="effacerSituation()">🗑️ Effacer le plateau</button>
+    </div>
+
+    <div class="sit-board-wrap">
+      <div id="sit-board" style="display:grid;grid-template-columns:repeat(9,1fr);gap:6px;background:linear-gradient(155deg,var(--wood-light),var(--wood-dark));padding:14px;border-radius:14px;box-shadow:0 7px 0 var(--wood-shadow),0 10px 25px rgba(0,0,0,0.6)"></div>
+      <div id="sit-cnum" style="display:grid;grid-template-columns:repeat(9,1fr);gap:6px;margin-top:6px;padding:0 14px"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════
 // ÉTAT
@@ -512,6 +571,88 @@ function switchTab(name,btn){
   btn.classList.add('active');
   document.getElementById('tab-'+name).classList.add('active');
   if(name==='bdd') chargerBDD();
+  if(name==='situation') buildSitBoard();
+}
+
+// ══════════════════════
+// CHEAT MODE
+// ══════════════════════
+const Sit={
+  plateau:Array(9).fill(null).map(()=>Array(9).fill(null)),
+  couleur:'rouge',
+  colSurlignee:null
+};
+
+function buildSitBoard(){
+  const b=document.getElementById('sit-board');
+  const cn=document.getElementById('sit-cnum');
+  b.innerHTML=''; cn.innerHTML='';
+  for(let r=0;r<9;r++) for(let c=0;c<9;c++){
+    const el=document.createElement('div');
+    el.className='sit-cell';
+    const v=Sit.plateau[r][c];
+    const surligne=Sit.colSurlignee===c;
+    if(v==='rouge') el.style.background='radial-gradient(circle at 38% 32%,#ff6688,#ff2244 55%,#cc0022)';
+    else if(v==='jaune') el.style.background='radial-gradient(circle at 38% 32%,#ffe066,#ffc107 55%,#cc8800)';
+    else el.style.background=surligne?'rgba(0,188,212,0.35)':'rgba(26,15,5,0.8)';
+    if(surligne) el.style.boxShadow='0 0 12px rgba(0,188,212,0.6)';
+    el.onclick=(()=>{const cc=c;return()=>clickSit(cc);})();
+    b.appendChild(el);
+  }
+  for(let c=0;c<9;c++){
+    const d=document.createElement('div');
+    d.style.cssText='text-align:center;font-size:0.7rem;font-weight:800;';
+    d.style.color=Sit.colSurlignee===c?'#4dd0e1':'rgba(255,248,240,0.3)';
+    d.textContent=c+1;
+    cn.appendChild(d);
+  }
+}
+
+function clickSit(c){
+  if(Sit.couleur==='effacer'){
+    for(let r=0;r<9;r++){if(Sit.plateau[r][c]!==null){Sit.plateau[r][c]=null;break;}}
+  } else {
+    for(let r=8;r>=0;r--){if(Sit.plateau[r][c]===null){Sit.plateau[r][c]=Sit.couleur;break;}}
+  }
+  Sit.colSurlignee=null;
+  document.getElementById('sit-result').style.display='none';
+  buildSitBoard();
+}
+
+function setSitPC(c){
+  Sit.couleur=c;
+  ['r','j','e'].forEach(x=>document.getElementById('sit-btn-'+x).classList.remove('active'));
+  document.getElementById('sit-btn-'+(c==='rouge'?'r':c==='jaune'?'j':'e')).classList.add('active');
+}
+
+function effacerSituation(){
+  Sit.plateau=Array(9).fill(null).map(()=>Array(9).fill(null));
+  Sit.colSurlignee=null;
+  document.getElementById('sit-result').style.display='none';
+  buildSitBoard();
+}
+
+async function analyserSituation(){
+  const joueur=document.getElementById('sit-joueur').value;
+  const prof=parseInt(document.getElementById('sit-prof').value);
+  const btn=document.querySelector('.abtn');
+  btn.textContent='⏳ Analyse...';btn.disabled=true;
+  try{
+    const r=await fetch('/api/pinceau',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({plateau:Sit.plateau,historique:[],joueur,profondeur:prof})});
+    const d=await r.json();
+    Sit.colSurlignee=d.meilleur_coup;
+    buildSitBoard();
+    document.getElementById('sit-coup').textContent='Colonne '+(d.meilleur_coup+1);
+    document.getElementById('sit-score').textContent='Source : '+d.source;
+    const pt={victoire:'✅ Victoire probable',defaite:'❌ Défaite probable',nul:'🟡 Nul',incertaine:'⚪ Équilibré'};
+    const pc={victoire:'#4dd0e1',defaite:'#ff6688',nul:'#ffc107',incertaine:'rgba(255,248,240,0.5)'};
+    const pred=d.prediction||'incertaine';
+    document.getElementById('sit-pred').textContent=pt[pred]||pred;
+    document.getElementById('sit-pred').style.color=pc[pred]||'white';
+    document.getElementById('sit-result').style.display='block';
+  }catch(e){alert('Erreur : '+e);}
+  btn.textContent='🔍 Analyser';btn.disabled=false;
 }
 
 // ══════════════════════
@@ -562,13 +703,12 @@ function refreshTurn(){
   document.getElementById('pr-j').className='prow'+(j==='jaune'?' aj':'');
 }
 
-function refreshPred(pred, nbTours=0){
+function refreshPred(pred){
   const j=G.joueur==='rouge'?'Rouge':'Jaune';
   const adv=G.joueur==='rouge'?'Jaune':'Rouge';
-  const toursTexte=nbTours>0?` dans ~${nbTours} tours`:'';
   const m={
-    victoire:['🟢 Victoire en vue','victoire',`${j} gagne${toursTexte} !`],
-    defaite: ['🔴 Défaite probable','defaite',`${adv} est en meilleure position${toursTexte}.`],
+    victoire:['🟢 Victoire en vue','victoire',`L'IA voit une victoire probable pour ${j}.`],
+    defaite: ['🔴 Défaite probable','defaite',`L'IA estime que ${adv} est en meilleure position.`],
     nul:     ['🟡 Match nul','nul','Le plateau est presque plein, aucun vainqueur en vue.'],
     incertaine:['⚪ Incertaine','incertaine','La partie est équilibrée. Tout peut basculer !']
   };
@@ -588,7 +728,7 @@ function applyData(d){
   if(d.poids_colonnes)G.poids=d.poids_colonnes;
   if(d.meilleur_coup!==undefined)G.bestCol=d.meilleur_coup;
   refreshBoard(d.pions_gagnants||[]);refreshW();
-  if(d.prediction)refreshPred(d.prediction, d.nb_tours||0);refreshTurn();
+  if(d.prediction)refreshPred(d.prediction);refreshTurn();
 }
 
 // ══════════════════════
