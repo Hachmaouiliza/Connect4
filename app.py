@@ -267,14 +267,15 @@ def calculer_poids_colonnes(plat, couleur=JAUNE):
     return poids
 
 def calculer_prediction(plat, couleur=JAUNE):
-    """CORRECTION : prédiction selon la couleur du joueur actuel"""
+    """Prédiction avec nombre de tours estimé"""
     libres = [c for c in range(COLS) if plat[0][c] is None]
-    if not libres: return "nul"
+    if not libres: return "nul", 0
     _, score = minimax(copy.deepcopy(plat), 3, -math.inf, math.inf, True, couleur)
-    if score >= 50000: return "victoire"
-    if score <= -50000: return "defaite"
-    if len(libres) <= 5: return "nul"
-    return "incertaine"
+    nb_tours = max(1, min(10, int(10 - abs(score) / 10000)))
+    if score >= 50000: return "victoire", nb_tours
+    if score <= -50000: return "defaite", nb_tours
+    if len(libres) <= 5: return "nul", 0
+    return "incertaine", 0
 
 def reconstruire_plateau(sequence):
     plat = plateau_vide()
@@ -310,6 +311,15 @@ def api_jouer():
     historique.append(col)
     vainqueur, pions_gagnants = verifier_victoire(plat)
 
+    prediction = "incertaine"
+    nb_tours = 0
+    meilleur = None
+
+    if not vainqueur:
+        prochain = JAUNE if joueur == ROUGE else ROUGE
+        prediction, nb_tours = calculer_prediction(plat, prochain)
+        meilleur, _ = meilleur_coup_ia(plat, historique, couleur=prochain)
+
     if vainqueur:
         enregistrer_partie("".join(map(str, historique)), vainqueur)
 
@@ -317,27 +327,12 @@ def api_jouer():
         "plateau": plat,
         "vainqueur": vainqueur,
         "pions_gagnants": pions_gagnants,
+        "poids_colonnes": [0]*COLS,
+        "prediction": prediction,
+        "nb_tours": nb_tours,
+        "meilleur_coup": meilleur,
         "historique": historique,
         "ligne_jouee": ligne
-    })
-
-@app.route("/api/poids", methods=["POST"])
-def api_poids():
-    """Route séparée pour les poids visuels — appelée en arrière-plan"""
-    data = request.json
-    plat = data["plateau"]
-    historique = data.get("historique", [])
-    joueur = data.get("joueur", JAUNE)
-    mode = data.get("mode", "ia_minimax")
-
-    poids = calculer_poids_colonnes(plat, joueur)
-    prediction = calculer_prediction(plat, joueur)
-    meilleur, _ = meilleur_coup_ia(plat, historique, mode=mode, couleur=joueur)
-
-    return jsonify({
-        "poids_colonnes": poids,
-        "prediction": prediction,
-        "meilleur_coup": meilleur
     })
 
 @app.route("/api/ia", methods=["POST"])
@@ -346,7 +341,6 @@ def api_ia():
     plat = data["plateau"]
     historique = data.get("historique", [])
     mode = data.get("mode", "ia_minimax")
-    # CORRECTION : on lit la vraie couleur envoyée par le front
     couleur = data.get("couleur", JAUNE)
 
     col, source = meilleur_coup_ia(plat, historique, mode, couleur)
@@ -354,18 +348,16 @@ def api_ia():
         libres = [c for c in range(COLS) if plat[0][c] is None]
         col = random.choice(libres) if libres else 0
 
-    # CORRECTION : joue avec la vraie couleur, pas JAUNE hardcodé
     ligne = jouer_coup(plat, col, couleur)
     historique.append(col)
     vainqueur, pions_gagnants = verifier_victoire(plat)
 
-    poids = [0] * COLS
     prediction = "incertaine"
+    nb_tours = 0
 
     if not vainqueur:
         prochain = ROUGE if couleur == JAUNE else JAUNE
-        poids = calculer_poids_colonnes(plat, prochain)
-        prediction = calculer_prediction(plat, prochain)
+        prediction, nb_tours = calculer_prediction(plat, prochain)
 
     if vainqueur:
         enregistrer_partie("".join(map(str, historique)), vainqueur)
@@ -376,8 +368,9 @@ def api_ia():
         "ligne_jouee": ligne,
         "vainqueur": vainqueur,
         "pions_gagnants": pions_gagnants,
-        "poids_colonnes": poids,
+        "poids_colonnes": [0]*COLS,
         "prediction": prediction,
+        "nb_tours": nb_tours,
         "source": source,
         "historique": historique
     })

@@ -562,12 +562,13 @@ function refreshTurn(){
   document.getElementById('pr-j').className='prow'+(j==='jaune'?' aj':'');
 }
 
-function refreshPred(pred){
+function refreshPred(pred, nbTours=0){
   const j=G.joueur==='rouge'?'Rouge':'Jaune';
   const adv=G.joueur==='rouge'?'Jaune':'Rouge';
+  const toursTexte=nbTours>0?` dans ~${nbTours} tours`:'';
   const m={
-    victoire:['🟢 Victoire en vue','victoire',`L'IA voit une victoire probable pour ${j}.`],
-    defaite: ['🔴 Défaite probable','defaite',`L'IA estime que ${adv} est en meilleure position.`],
+    victoire:['🟢 Victoire en vue','victoire',`${j} gagne${toursTexte} !`],
+    defaite: ['🔴 Défaite probable','defaite',`${adv} est en meilleure position${toursTexte}.`],
     nul:     ['🟡 Match nul','nul','Le plateau est presque plein, aucun vainqueur en vue.'],
     incertaine:['⚪ Incertaine','incertaine','La partie est équilibrée. Tout peut basculer !']
   };
@@ -587,7 +588,7 @@ function applyData(d){
   if(d.poids_colonnes)G.poids=d.poids_colonnes;
   if(d.meilleur_coup!==undefined)G.bestCol=d.meilleur_coup;
   refreshBoard(d.pions_gagnants||[]);refreshW();
-  if(d.prediction)refreshPred(d.prediction);refreshTurn();
+  if(d.prediction)refreshPred(d.prediction, d.nb_tours||0);refreshTurn();
 }
 
 // ══════════════════════
@@ -604,26 +605,13 @@ async function click(r,c){
 async function jouerCoup(col){
   if(G.fin||G.locked)return;
   G.locked=true;
-
-  // AFFICHAGE IMMÉDIAT du pion sans attendre le serveur
-  let ligneJouee=-1;
-  for(let r=8;r>=0;r--){
-    if(G.plateau[r][col]===null){G.plateau[r][col]=G.joueur;ligneJouee=r;break;}
-  }
-  if(ligneJouee===-1){G.locked=false;return;}
-  const jav=G.joueur;
-  G.joueur=jav==='rouge'?'jaune':'rouge';
-  G.nbCoups++;
-  refreshBoard();refreshTurn();refreshLM(jav,col);
-
-  // Appel serveur en arrière-plan (poids + vérification victoire)
-  const modeEnvoi=G.gameMode==='hvh'?'2_joueurs':G.iaMode;
+  const modeEnvoi = G.gameMode==='hvh' ? '2_joueurs' : G.iaMode;
   const r=await fetch('/api/jouer',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({plateau:G.plateau,col,joueur:jav,historique:G.historique,profondeur:G.profondeur,mode:modeEnvoi})});
+    body:JSON.stringify({plateau:G.plateau,col,joueur:G.joueur,historique:G.historique,profondeur:G.profondeur,mode:modeEnvoi})});
   const d=await r.json();if(d.erreur){G.locked=false;return;}
-  G.plateau=d.plateau;G.historique=d.historique;
-  applyData(d);
-
+  const jav=G.joueur;G.plateau=d.plateau;G.historique=d.historique;G.nbCoups++;
+  G.joueur=jav==='rouge'?'jaune':'rouge';
+  refreshLM(jav,col);applyData(d);
   if(d.vainqueur){G.fin=true;G.locked=false;setTimeout(()=>showModal(d.vainqueur),600);refreshStats();return;}
   if(G.gameMode==='hvi'&&G.joueur!==G.couleurHumain){
     document.getElementById('tbanner').textContent='IA réfléchit...';
