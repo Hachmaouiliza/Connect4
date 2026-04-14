@@ -215,7 +215,7 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
 .sit-result-coup{font-family:'Fredoka One',cursive;font-size:1.6rem;color:#4dd0e1;text-align:center;margin:6px 0;}
 .abtn{width:100%;padding:11px;border:none;border-radius:9px;font-family:'Fredoka One',cursive;font-size:0.95rem;cursor:pointer;background:linear-gradient(155deg,#00bcd4,#0097a7);color:white;box-shadow:0 4px 0 #006070;transition:all 0.1s;}
 .ebtn{width:100%;padding:9px;border:none;border-radius:9px;font-family:'Fredoka One',cursive;font-size:0.85rem;cursor:pointer;background:linear-gradient(155deg,#c0392b,#922b21);color:white;box-shadow:0 4px 0 #641e16;}
-.sit-board-wrap{flex:1;}
+.sit-board-wrap{flex:1;max-width:500px;}
 .sit-cell{aspect-ratio:1;border-radius:50%;cursor:pointer;transition:all 0.15s;background:rgba(26,15,5,0.8);}
 .mbox-large{min-width:500px;max-width:540px;text-align:left;padding:24px 26px;}
 .minput{width:100%;background:rgba(0,0,0,0.35);border:2px solid rgba(255,248,240,0.15);border-radius:8px;padding:8px 11px;color:var(--text);font-family:'Nunito',sans-serif;font-size:0.88rem;font-weight:700;outline:none;transition:border-color 0.2s;}
@@ -226,11 +226,18 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
 .mmsg{font-size:0.76rem;font-weight:700;min-height:18px;margin-bottom:10px;}
 
 @media(max-width:920px){
-  .layout,.bdd-layout{flex-direction:column;align-items:center;}
-  .pl,.pr,.bdd-right{width:100%;max-width:600px;}
+  .layout,.bdd-layout,.sit-layout{flex-direction:column;align-items:center;}
+  .pl,.pr,.bdd-right,.sit-left{width:100%;max-width:600px;}
+  .sit-board-wrap{width:100%;max-width:350px;}
   #board{grid-template-columns:repeat(9,40px);grid-template-rows:repeat(9,40px);}
   .crow,.wrow{grid-template-columns:repeat(9,40px);}
   .mini-board{grid-template-columns:repeat(9,24px);grid-template-rows:repeat(9,24px);}
+}
+
+@media(max-width:500px){
+  .sit-board-wrap{max-width:280px;}
+  #board{grid-template-columns:repeat(9,32px);grid-template-rows:repeat(9,32px);}
+  .crow,.wrow{grid-template-columns:repeat(9,32px);}
 }
 </style>
 </head>
@@ -284,8 +291,15 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
 
 <!-- TITRE -->
 <div class="game-title">CONNECT 4</div>
-<div class="game-sub">AI · 9×9</div>
-<div class="game-sub" style="margin-top:-8px;letter-spacing:0.15em;color:rgba(255,248,240,0.6);">LIZA HACHMAOUI</div>
+<div class="game-sub" style="letter-spacing:0.15em;color:rgba(255,248,240,0.6);">LIZA HACHMAOUI</div>
+
+<!-- MENU PRINCIPAL -->
+<div style="display:flex;gap:10px;margin:15px 0;flex-wrap:wrap;justify-content:center;">
+  <button class="wbtn jb" style="width:auto;padding:12px 24px;font-size:0.95rem;margin:0;" onclick="nouvellePartie();switchTab('jeu',document.querySelectorAll('.tab')[0])">▶️ Nouvelle partie</button>
+  <button class="wbtn" style="width:auto;padding:12px 24px;font-size:0.95rem;margin:0;background:linear-gradient(155deg,#1a6b3a,#0d4a27);box-shadow:0 4px 0 #082a17;" onclick="switchTab('jeu',document.querySelectorAll('.tab')[0])">⏯️ Reprendre</button>
+  <button class="wbtn jb" style="width:auto;padding:12px 24px;font-size:0.95rem;margin:0;" onclick="sauvegarderPartie()">💾 Sauvegarder</button>
+  <button class="wbtn rb" style="width:auto;padding:12px 24px;font-size:0.95rem;margin:0;" onclick="abandonnerPartie()">🏳️ Abandonner</button>
+</div>
 
 <!-- ONGLETS -->
 <div class="tabs">
@@ -362,31 +376,39 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
       </div>
 
       <div class="wc">
-        <div class="slabel">Actions</div>
+        <div class="slabel">🎮 Partie</div>
+        <button class="wbtn rb" onclick="nouvellePartie()">⟳ Nouvelle partie</button>
+        <div style="display:flex;gap:5px;margin-bottom:5px">
+          <button class="wbtn jb" style="margin:0;flex:1;font-size:0.72rem" onclick="sauvegarderPartie()">💾 Sauvegarder</button>
+          <button class="wbtn rb" style="margin:0;flex:1;font-size:0.72rem" onclick="abandonnerPartie()">🏳️ Abandonner</button>
+        </div>
+      </div>
+
+      <div class="wc">
+        <div class="slabel">🎯 Actions IA</div>
         <button class="wbtn jb" onclick="demanderSuggestion()">💡 Que jouerait l'IA ?</button>
-        <button class="wbtn tb" onclick="togglePinceau()">🖌 Mode Pinceau</button>
+        <button class="wbtn" style="background:linear-gradient(155deg,#1a6b3a,#0d4a27);box-shadow:0 4px 0 #082a17,0 6px 12px rgba(0,0,0,0.4)" id="btn-laisser-ia" onclick="laisserIAJouer()">🤖 Laisser l'IA jouer</button>
+        <button class="wbtn" style="background:linear-gradient(155deg,#e74c3c,#c0392b);box-shadow:0 4px 0 #922b21,0 6px 12px rgba(0,0,0,0.4)" onclick="reprendreHumain()">👤 Je reprends la main</button>
+        <button class="wbtn" onclick="annulerCoup()">↩ Annuler coup</button>
+      </div>
+
+      <div class="wc">
+        <div class="slabel">🖌 Mode Pinceau</div>
+        <button class="wbtn tb" onclick="togglePinceau()">🖌 Activer Pinceau</button>
         <div class="pinceau-info" id="pinceau-info" style="display:none">
-          Pose des pions librement sur le plateau, puis clique sur <strong>Analyser IA</strong> pour voir le meilleur coup.
+          Pose des pions librement sur le plateau, puis clique sur <strong>Analyser</strong> pour voir à qui de jouer et le meilleur coup.
         </div>
         <div class="pcols" id="pcols">
           <div class="pc rpc act" id="pcr" onclick="setPC('rouge')">● Rouge</div>
           <div class="pc jpc" id="pcj" onclick="setPC('jaune')">● Jaune</div>
           <div class="pc epc" id="pce" onclick="setPC('effacer')">✕ Eff.</div>
         </div>
-        <button class="wbtn tb" id="btn-iap" style="display:none" onclick="demanderIA()">🧠 Analyser avec l'IA</button>
-        <button class="wbtn" style="background:linear-gradient(155deg,#1a6b3a,#0d4a27);box-shadow:0 4px 0 #082a17,0 6px 12px rgba(0,0,0,0.4)" id="btn-laisser-ia" onclick="laisserIAJouer()">🤖 Laisser l'IA jouer</button>
-        <button class="wbtn" onclick="annulerCoup()">↩ Annuler coup</button>
+        <button class="wbtn tb" id="btn-iap" style="display:none" onclick="analyserPlateau()">🔍 Analyser (à qui de jouer ?)</button>
+        <button class="wbtn jb" id="btn-continuer" style="display:none" onclick="continuerPartie()">▶️ Continuer cette partie</button>
+      </div>
 
-        <div style="height:1px;background:rgba(255,248,240,0.1);margin:6px 0"></div>
-
-        <button class="wbtn rb" onclick="nouvellePartie()">⟳ Nouvelle partie</button>
-        <div style="display:flex;gap:5px;margin-bottom:5px">
-          <button class="wbtn jb" style="margin:0;flex:1;font-size:0.72rem" onclick="sauvegarderPartie()">💾 Sauvegarder</button>
-          <button class="wbtn rb" style="margin:0;flex:1;font-size:0.72rem" onclick="abandonnerPartie()">🏳️ Abandonner</button>
-        </div>
-
-        <div style="height:1px;background:rgba(255,248,240,0.1);margin:6px 0"></div>
-
+      <div class="wc">
+        <div class="slabel">📥 Importer</div>
         <button class="wbtn ob" onclick="document.getElementById('modal-bga').classList.add('show')">📋 Importer BGA</button>
         <button class="wbtn ob" style="background:linear-gradient(155deg,#8e44ad,#6c3483);box-shadow:0 4px 0 #3d1a5e,0 6px 12px rgba(0,0,0,0.4)" onclick="document.getElementById('modal-fichier').classList.add('show')">📂 Importer fichier texte</button>
       </div>
@@ -703,12 +725,30 @@ function refreshTurn(){
   document.getElementById('pr-j').className='prow'+(j==='jaune'?' aj':'');
 }
 
-function refreshPred(pred){
-  const j=G.joueur==='rouge'?'Rouge':'Jaune';
-  const adv=G.joueur==='rouge'?'Jaune':'Rouge';
+function refreshPred(predData){
+  // predData peut être un string (ancien format) ou un objet (nouveau format)
+  let pred, coups, joueurPred;
+  if(typeof predData === 'object' && predData !== null) {
+    pred = predData.prediction;
+    coups = predData.coups_restants || 0;
+    joueurPred = predData.joueur || G.joueur;
+  } else {
+    pred = predData;
+    coups = 0;
+    joueurPred = G.joueur;
+  }
+  
+  const j = joueurPred === 'rouge' ? 'Rouge' : 'Jaune';
+  const adv = joueurPred === 'rouge' ? 'Jaune' : 'Rouge';
+  
+  let coupsRestants = '';
+  if(coups > 0) {
+    coupsRestants = ` dans ${coups} coup${coups > 1 ? 's' : ''}`;
+  }
+  
   const m={
-    victoire:['🟢 Victoire en vue','victoire',`L'IA voit une victoire probable pour ${j}.`],
-    defaite: ['🔴 Défaite probable','defaite',`L'IA estime que ${adv} est en meilleure position.`],
+    victoire:['🟢 ' + j + ' gagne' + coupsRestants,'victoire',`${j} a une victoire${coupsRestants}.`],
+    defaite: ['🔴 ' + adv + ' gagne' + coupsRestants,'defaite',`${adv} gagne${coupsRestants}.`],
     nul:     ['🟡 Match nul','nul','Le plateau est presque plein, aucun vainqueur en vue.'],
     incertaine:['⚪ Incertaine','incertaine','La partie est équilibrée. Tout peut basculer !']
   };
@@ -823,20 +863,94 @@ function nouvellePartie(){
 }
 async function demanderSuggestion(){
   const r=await fetch('/api/suggestion',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({plateau:G.plateau,historique:G.historique,profondeur:G.profondeur})});
+    body:JSON.stringify({plateau:G.plateau,historique:G.historique,profondeur:G.profondeur,joueur:G.joueur})});
   const d=await r.json();G.poids=d.poids_colonnes;G.bestCol=d.meilleur_coup;refreshW();
+  if(d.prediction) refreshPred(d.prediction);
   document.getElementById('suggcard').style.display='block';
   document.getElementById('suggcol').textContent=`Colonne ${d.meilleur_coup+1}`;
-  document.getElementById('suggsrc').textContent=d.source==='memoire'?'depuis la base de données':'calcul minimax';
+  const srcLabels = {'memoire':'depuis la base de données','minimax':'calcul minimax','ouverture':'bibliothèque d\'ouvertures','blocage':'blocage urgent'};
+  document.getElementById('suggsrc').textContent=srcLabels[d.source]||d.source;
 }
 
 async function demanderIA(){
   const r=await fetch('/api/pinceau',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({plateau:G.plateau,historique:G.historique,profondeur:G.profondeur})});
+    body:JSON.stringify({plateau:G.plateau,historique:G.historique,profondeur:G.profondeur,joueur:G.joueur})});
   const d=await r.json();G.poids=d.poids_colonnes;G.bestCol=d.meilleur_coup;refreshW();refreshPred(d.prediction);
   document.getElementById('suggcard').style.display='block';
   document.getElementById('suggcol').textContent=`Colonne ${d.meilleur_coup+1}`;
   document.getElementById('suggsrc').textContent=`source: ${d.source}`;
+}
+
+async function analyserPlateau(){
+  // Analyse un plateau peint pour savoir à qui de jouer
+  const r=await fetch('/api/analyser',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({plateau:G.plateau})});
+  const d=await r.json();
+  
+  G.joueur = d.joueur_actuel;
+  G.poids = d.poids_colonnes;
+  G.bestCol = d.meilleur_coup;
+  refreshW();
+  refreshPred(d.prediction);
+  refreshTurn();
+  
+  const joueurNom = d.joueur_actuel === 'rouge' ? 'ROUGE' : 'JAUNE';
+  alert(`🔍 Analyse du plateau:\n\n` +
+    `Pions rouges: ${d.pions_rouges}\n` +
+    `Pions jaunes: ${d.pions_jaunes}\n\n` +
+    `➡️ C'est à ${joueurNom} de jouer\n\n` +
+    `Meilleur coup: Colonne ${d.meilleur_coup + 1}`);
+  
+  document.getElementById('suggcard').style.display='block';
+  document.getElementById('suggcol').textContent=`Colonne ${d.meilleur_coup+1}`;
+  document.getElementById('suggsrc').textContent=`À ${joueurNom} de jouer`;
+  
+  // Afficher le bouton continuer
+  document.getElementById('btn-continuer').style.display='block';
+}
+
+function continuerPartie(){
+  // Continuer la partie après analyse du pinceau
+  G.pinceau = false;
+  G.fin = false;
+  G.locked = false;
+  document.getElementById('pcols').classList.remove('show');
+  document.getElementById('btn-iap').style.display='none';
+  document.getElementById('btn-continuer').style.display='none';
+  document.getElementById('pinceau-info').style.display='none';
+  
+  // Reconstruire l'historique depuis le plateau
+  let nbPions = 0;
+  for(let r=0;r<9;r++) for(let c=0;c<9;c++) if(G.plateau[r][c]) nbPions++;
+  G.nbCoups = nbPions;
+  G.historique = []; // On ne peut pas reconstruire l'ordre exact
+  
+  refreshBoard();
+  refreshTurn();
+  
+  alert(`Partie reprise ! C'est à ${G.joueur === 'rouge' ? 'ROUGE' : 'JAUNE'} de jouer.`);
+}
+
+function reprendreHumain(){
+  // Arrêter l'IA et reprendre en tant qu'humain
+  if(G.timer){clearInterval(G.timer);clearTimeout(G.timer);G.timer=null;}
+  G.gameMode = 'hvi';
+  G.couleurHumain = G.joueur; // L'humain prend la couleur actuelle
+  G.locked = false;
+  
+  document.querySelectorAll('[data-gamemode]').forEach(b=>b.classList.remove('active'));
+  document.querySelector('[data-gamemode="hvi"]').classList.add('active');
+  document.getElementById('ia-mode-wrap').style.display='block';
+  document.getElementById('couleur-wrap').style.display='flex';
+  
+  // Mettre à jour les boutons de couleur
+  document.getElementById('cbtn-r').classList.toggle('active', G.couleurHumain==='rouge');
+  document.getElementById('cbtn-j').classList.toggle('active', G.couleurHumain==='jaune');
+  
+  updateTypes();
+  refreshTurn();
+  
+  alert(`Vous reprenez la main en tant que ${G.joueur === 'rouge' ? 'ROUGE' : 'JAUNE'} !`);
 }
 
 // ══════════════════════
@@ -1170,14 +1284,35 @@ async function sauvegarderPartie(){
   }catch(e){alert('Erreur : '+e.message);}
 }
 
-function abandonnerPartie(){
+async function abandonnerPartie(){
   if(!G.historique.length){alert('Aucune partie en cours !');return;}
-  if(!confirm('Abandonner la partie ? Elle sera sauvegardée avec vainqueur inconnu.'))return;
-  const seq=G.historique.join('');
-  fetch('/api/sauvegarder',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({sequence:seq,vainqueur:'abandon'})}).then(()=>{
-      refreshStats();nouvellePartie();
+  
+  // Demander la raison d'abandon à l'IA
+  let raison = "";
+  try {
+    const r = await fetch('/api/raison_abandon', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({plateau: G.plateau, joueur: G.joueur})
     });
+    const d = await r.json();
+    raison = d.raison || "";
+  } catch(e) {
+    raison = "Analyse indisponible.";
+  }
+  
+  const msg = `Abandonner la partie ?\n\n📊 Analyse IA:\n${raison}\n\nLa partie sera sauvegardée.`;
+  if(!confirm(msg)) return;
+  
+  const seq = G.historique.join('');
+  fetch('/api/sauvegarder', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({sequence: seq, vainqueur: 'abandon'})
+  }).then(() => {
+    refreshStats();
+    nouvellePartie();
+  });
 }
 
 async function refreshStats(){

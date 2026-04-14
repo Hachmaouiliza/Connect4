@@ -14,6 +14,13 @@ ROUGE = "rouge"
 JAUNE = "jaune"
 PROFONDEUR = 4
 
+# Bibliothèque d'ouvertures (premiers coups évidents - pas besoin de calcul)
+OUVERTURES = {
+    "": 4,  # Premier coup : centre
+    "4": 4, # Réponse au centre : centre aussi
+    "0": 4, "1": 4, "2": 4, "3": 4, "5": 4, "6": 4, "7": 4, "8": 4,  # Toujours centre
+}
+
 # ══════════════════════════════════════════════
 # DB
 # ══════════════════════════════════════════════
@@ -22,7 +29,6 @@ def get_db():
         db_url = os.environ.get("DATABASE_URL")
         if db_url:
             return psycopg2.connect(db_url, sslmode='require')
-        # Fallback local
         return psycopg2.connect(
             host="127.0.0.1",
             database="connect4",
@@ -53,14 +59,12 @@ def get_parties_recentes(limit=20):
     if not conn: return []
     try:
         cur = conn.cursor()
-        # MODIFIÉ : utilise les colonnes du CSV fusionné
         cur.execute("SELECT id, created_at, joueur_gagnant, coups FROM parties ORDER BY id DESC LIMIT %s", (limit,))
         rows = cur.fetchall()
         cur.close(); conn.close()
         result = []
         for r in rows:
             coups_str = r[3] if r[3] else ""
-            # Nettoyer les parenthèses si présentes
             coups_str = coups_str.replace("(", "").replace(")", "")
             result.append({
                 "id": r[0], 
@@ -79,12 +83,10 @@ def enregistrer_partie(sequence, vainqueur):
     if not conn: return
     try:
         cur = conn.cursor()
-        # CORRECTION : poids neutre pour abandon, +1 jaune, -1 rouge
         if vainqueur == JAUNE: valeur_poids = 1
         elif vainqueur == ROUGE: valeur_poids = -1
         else: valeur_poids = 0
 
-        # MODIFIÉ : utilise les colonnes du CSV fusionné
         cur.execute("SELECT id FROM parties WHERE coups = %s", (sequence,))
         if not cur.fetchone():
             cur.execute("INSERT INTO parties (created_at, joueur_gagnant, coups, statut) VALUES (%s, %s, %s, %s)",
@@ -93,13 +95,11 @@ def enregistrer_partie(sequence, vainqueur):
             for coup in sequence:
                 id_act = etat if etat else "start"
                 etat += str(coup)
-                # CORRECTION : ON CONFLICT sur (id_plateau, meilleur_coup) — plusieurs coups par position
                 cur.execute("""
                     INSERT INTO positions (id_plateau, meilleur_coup, poids) VALUES (%s, %s, %s)
                     ON CONFLICT (id_plateau, meilleur_coup) DO UPDATE SET poids = positions.poids + EXCLUDED.poids
                 """, (id_act, int(coup), valeur_poids))
 
-        # Symétrie
         sym = calculer_symetrique(sequence)
         cur.execute("SELECT id FROM parties WHERE coups = %s", (sym,))
         if not cur.fetchone():
@@ -120,7 +120,6 @@ def enregistrer_partie(sequence, vainqueur):
         print(f"SQL ERROR: {e}")
 
 def chercher_memoire(historique, couleur=None):
-    """CORRECTION : récupère le coup avec le MEILLEUR poids pondéré selon la couleur"""
     sequence = "".join(map(str, historique))
     if not sequence: return None
     conn = get_db()
@@ -128,13 +127,11 @@ def chercher_memoire(historique, couleur=None):
     try:
         cur = conn.cursor()
         if couleur == ROUGE:
-            # Rouge veut minimiser → poids le plus BAS (négatif)
             cur.execute(
                 "SELECT meilleur_coup FROM positions WHERE id_plateau = %s ORDER BY poids ASC LIMIT 1",
                 (sequence,)
             )
         else:
-            # Jaune veut maximiser → poids le plus HAUT (positif)
             cur.execute(
                 "SELECT meilleur_coup FROM positions WHERE id_plateau = %s ORDER BY poids DESC LIMIT 1",
                 (sequence,)
@@ -172,6 +169,23 @@ def verifier_victoire(plateau):
                         return couleur, [(r+i*dr, c+i*dc) for i in range(4)]
     return None, []
 
+def compter_pions(plateau):
+    """Compte les pions de chaque couleur pour savoir à qui de jouer"""
+    rouges = sum(row.count(ROUGE) for row in plateau)
+    jaunes = sum(row.count(JAUNE) for row in plateau)
+    return rouges, jaunes
+
+def detecter_joueur_actuel(plateau):
+    """Détecte à qui de jouer en fonction du nombre de pions"""
+    rouges, jaunes = compter_pions(plateau)
+    # Rouge commence toujours, donc si égalité c'est à rouge
+    if rouges == jaunes:
+        return ROUGE
+    elif rouges > jaunes:
+        return JAUNE
+    else:
+        return ROUGE  # Situation anormale, on dit rouge
+
 def evaluer_fenetre(fen, pion):
     score = 0
     adv = ROUGE if pion == JAUNE else JAUNE
@@ -200,7 +214,6 @@ def score_position(plat, pion):
     return score
 
 def minimax(plat, prof, alpha, beta, maximisant, pion_max=JAUNE):
-    """CORRECTION : minimax générique, fonctionne pour ROUGE ou JAUNE"""
     pion_min = ROUGE if pion_max == JAUNE else JAUNE
     libres = [c for c in range(COLS) if plat[0][c] is None]
     v, _ = verifier_victoire(plat)
@@ -231,7 +244,6 @@ def minimax(plat, prof, alpha, beta, maximisant, pion_max=JAUNE):
         return col_res, val
 
 def coup_urgent(plat, couleur):
-    """Retourne le coup à jouer si l'adversaire peut gagner au prochain coup, sinon None"""
     adv = ROUGE if couleur == JAUNE else JAUNE
     libres = [c for c in range(COLS) if plat[0][c] is None]
     for col in libres:
@@ -239,18 +251,21 @@ def coup_urgent(plat, couleur):
         jouer_coup(temp, col, adv)
         v, _ = verifier_victoire(temp)
         if v == adv:
-            return col  # bloquer ce coup urgent
+            return col
     return None
 
 def meilleur_coup_ia(plat, historique, mode='ia_minimax', couleur=JAUNE):
-    """CORRECTION : 3 modes séparés, couleur passée partout"""
     libres = [c for c in range(COLS) if plat[0][c] is None]
     if not libres: return None, "aucun"
+
+    # Vérifier bibliothèque d'ouvertures (réponse immédiate)
+    seq = "".join(map(str, historique))
+    if seq in OUVERTURES and OUVERTURES[seq] in libres:
+        return OUVERTURES[seq], "ouverture"
 
     if mode == 'ia_random':
         return random.choice(libres), "random"
 
-    # Vérification urgente : bloquer victoire adversaire immédiate
     bloc = coup_urgent(plat, couleur)
 
     if mode == 'ia_db':
@@ -261,7 +276,6 @@ def meilleur_coup_ia(plat, historique, mode='ia_minimax', couleur=JAUNE):
             return coup_memoire, "memoire"
         return random.choice(libres), "random"
 
-    # ia_minimax : DB d'abord, minimax en fallback
     if bloc is not None:
         return bloc, "blocage"
     coup_memoire = chercher_memoire(historique, couleur)
@@ -271,7 +285,6 @@ def meilleur_coup_ia(plat, historique, mode='ia_minimax', couleur=JAUNE):
     return col, "minimax"
 
 def calculer_poids_colonnes(plat, couleur=JAUNE):
-    """CORRECTION : poids calculés selon la couleur du joueur"""
     libres = [c for c in range(COLS) if plat[0][c] is None]
     poids = [0] * COLS
     for c in libres:
@@ -282,14 +295,24 @@ def calculer_poids_colonnes(plat, couleur=JAUNE):
     return poids
 
 def calculer_prediction(plat, couleur=JAUNE):
-    """CORRECTION : prédiction selon la couleur du joueur actuel"""
+    """Retourne la prédiction avec score et nombre de coups estimé"""
     libres = [c for c in range(COLS) if plat[0][c] is None]
-    if not libres: return "nul"
-    _, score = minimax(copy.deepcopy(plat), 3, -math.inf, math.inf, True, couleur)
-    if score >= 50000: return "victoire"
-    if score <= -50000: return "defaite"
-    if len(libres) <= 5: return "nul"
-    return "incertaine"
+    if not libres: 
+        return {"prediction": "nul", "score": 0, "coups_restants": 0, "joueur": couleur}
+    
+    _, score = minimax(copy.deepcopy(plat), 4, -math.inf, math.inf, True, couleur)
+    
+    coups_restants = 0
+    if abs(score) >= 50000:
+        coups_restants = max(1, min(10, (100000 - abs(score)) // 12000 + 1))
+    
+    if score >= 50000: 
+        return {"prediction": "victoire", "score": score, "coups_restants": coups_restants, "joueur": couleur}
+    if score <= -50000: 
+        return {"prediction": "defaite", "score": score, "coups_restants": coups_restants, "joueur": couleur}
+    if len(libres) <= 5: 
+        return {"prediction": "nul", "score": score, "coups_restants": 0, "joueur": couleur}
+    return {"prediction": "incertaine", "score": score, "coups_restants": 0, "joueur": couleur}
 
 def reconstruire_plateau(sequence):
     plat = plateau_vide()
@@ -327,7 +350,7 @@ def api_jouer():
     vainqueur, pions_gagnants = verifier_victoire(plat)
 
     poids = [0] * COLS
-    prediction = "incertaine"
+    prediction = {"prediction": "incertaine", "score": 0, "coups_restants": 0, "joueur": joueur}
     meilleur = None
 
     if not vainqueur and mode != "2_joueurs":
@@ -356,7 +379,6 @@ def api_ia():
     plat = data["plateau"]
     historique = data.get("historique", [])
     mode = data.get("mode", "ia_minimax")
-    # CORRECTION : on lit la vraie couleur envoyée par le front
     couleur = data.get("couleur", JAUNE)
 
     col, source = meilleur_coup_ia(plat, historique, mode, couleur)
@@ -364,13 +386,12 @@ def api_ia():
         libres = [c for c in range(COLS) if plat[0][c] is None]
         col = random.choice(libres) if libres else 0
 
-    # CORRECTION : joue avec la vraie couleur, pas JAUNE hardcodé
     ligne = jouer_coup(plat, col, couleur)
     historique.append(col)
     vainqueur, pions_gagnants = verifier_victoire(plat)
 
     poids = [0] * COLS
-    prediction = "incertaine"
+    prediction = {"prediction": "incertaine", "score": 0, "coups_restants": 0, "joueur": couleur}
 
     if not vainqueur:
         prochain = ROUGE if couleur == JAUNE else JAUNE
@@ -400,7 +421,13 @@ def api_suggestion():
     joueur = data.get("joueur", JAUNE)
     poids = calculer_poids_colonnes(plat, joueur)
     col, source = meilleur_coup_ia(plat, historique, couleur=joueur)
-    return jsonify({"meilleur_coup": col, "poids_colonnes": poids, "source": source})
+    prediction = calculer_prediction(plat, joueur)
+    return jsonify({
+        "meilleur_coup": col, 
+        "poids_colonnes": poids, 
+        "source": source,
+        "prediction": prediction
+    })
 
 @app.route("/api/pinceau", methods=["POST"])
 def api_pinceau():
@@ -421,6 +448,60 @@ def api_pinceau():
         "source": source
     })
 
+@app.route("/api/analyser", methods=["POST"])
+def api_analyser():
+    """Analyse un plateau peint : détecte à qui de jouer et donne la prédiction"""
+    data = request.json
+    plat = data["plateau"]
+    
+    rouges, jaunes = compter_pions(plat)
+    joueur_actuel = detecter_joueur_actuel(plat)
+    adversaire = JAUNE if joueur_actuel == ROUGE else ROUGE
+    
+    prediction = calculer_prediction(plat, joueur_actuel)
+    poids = calculer_poids_colonnes(plat, joueur_actuel)
+    col, source = meilleur_coup_ia(plat, [], couleur=joueur_actuel)
+    
+    return jsonify({
+        "pions_rouges": rouges,
+        "pions_jaunes": jaunes,
+        "joueur_actuel": joueur_actuel,
+        "prediction": prediction,
+        "meilleur_coup": col,
+        "poids_colonnes": poids,
+        "source": source
+    })
+
+@app.route("/api/raison_abandon", methods=["POST"])
+def api_raison_abandon():
+    """Analyse pourquoi un joueur devrait abandonner"""
+    data = request.json
+    plat = data["plateau"]
+    joueur = data.get("joueur", ROUGE)
+    
+    prediction = calculer_prediction(plat, joueur)
+    adversaire = JAUNE if joueur == ROUGE else ROUGE
+    pred_adv = calculer_prediction(plat, adversaire)
+    
+    raison = ""
+    if prediction["prediction"] == "defaite":
+        coups = prediction["coups_restants"]
+        if coups > 0:
+            raison = f"L'adversaire ({adversaire.upper()}) gagne dans environ {coups} coup(s). Position défavorable."
+        else:
+            raison = f"L'adversaire ({adversaire.upper()}) a une position dominante. Victoire probable pour lui."
+    elif pred_adv["prediction"] == "victoire":
+        coups = pred_adv["coups_restants"]
+        raison = f"Analyse IA : {adversaire.upper()} voit une victoire dans {coups} coup(s)."
+    else:
+        raison = "La position est encore jouable. Pas de raison évidente d'abandonner."
+    
+    return jsonify({
+        "raison": raison,
+        "prediction_joueur": prediction,
+        "prediction_adversaire": pred_adv
+    })
+
 @app.route("/api/parties")
 def api_parties():
     return jsonify(get_parties_recentes())
@@ -431,7 +512,6 @@ def api_rejouer(partie_id):
     if not conn: return jsonify({"erreur": "DB indisponible"})
     try:
         cur = conn.cursor()
-        # MODIFIÉ : utilise les colonnes du CSV fusionné
         cur.execute("SELECT coups, joueur_gagnant FROM parties WHERE id = %s", (partie_id,))
         r = cur.fetchone()
         cur.close(); conn.close()
@@ -455,7 +535,6 @@ def api_sauvegarder():
     enregistrer_partie(sequence, vainqueur)
     return jsonify({"ok": True, "sequence": sequence, "vainqueur": vainqueur})
 
-# CORRECTION : route /api/bga placée AVANT app.run()
 @app.route("/api/bga", methods=["POST"])
 def api_bga():
     import json as json_lib
