@@ -53,11 +53,25 @@ def get_parties_recentes(limit=20):
     if not conn: return []
     try:
         cur = conn.cursor()
-        cur.execute("SELECT id, date, vainqueur, suite_coups FROM parties ORDER BY id DESC LIMIT %s", (limit,))
+        # MODIFIÉ : utilise les colonnes du CSV fusionné
+        cur.execute("SELECT id, created_at, joueur_gagnant, coups FROM parties ORDER BY id DESC LIMIT %s", (limit,))
         rows = cur.fetchall()
         cur.close(); conn.close()
-        return [{"id": r[0], "date": str(r[1])[:16], "vainqueur": r[2], "coups": r[3], "nb_coups": len(r[3])} for r in rows]
-    except:
+        result = []
+        for r in rows:
+            coups_str = r[3] if r[3] else ""
+            # Nettoyer les parenthèses si présentes
+            coups_str = coups_str.replace("(", "").replace(")", "")
+            result.append({
+                "id": r[0], 
+                "date": str(r[1])[:16] if r[1] else "", 
+                "vainqueur": r[2] if r[2] else "", 
+                "coups": coups_str, 
+                "nb_coups": len(coups_str)
+            })
+        return result
+    except Exception as e:
+        print(f"Erreur get_parties_recentes: {e}")
         return []
 
 def enregistrer_partie(sequence, vainqueur):
@@ -70,10 +84,11 @@ def enregistrer_partie(sequence, vainqueur):
         elif vainqueur == ROUGE: valeur_poids = -1
         else: valeur_poids = 0
 
-        cur.execute("SELECT id FROM parties WHERE suite_coups = %s", (sequence,))
+        # MODIFIÉ : utilise les colonnes du CSV fusionné
+        cur.execute("SELECT id FROM parties WHERE coups = %s", (sequence,))
         if not cur.fetchone():
-            cur.execute("INSERT INTO parties (date, vainqueur, suite_coups) VALUES (%s, %s, %s)",
-                        (datetime.now(), vainqueur, sequence))
+            cur.execute("INSERT INTO parties (created_at, joueur_gagnant, coups, statut) VALUES (%s, %s, %s, %s)",
+                        (datetime.now(), vainqueur, sequence, "TERMINEE"))
             etat = ""
             for coup in sequence:
                 id_act = etat if etat else "start"
@@ -86,10 +101,10 @@ def enregistrer_partie(sequence, vainqueur):
 
         # Symétrie
         sym = calculer_symetrique(sequence)
-        cur.execute("SELECT id FROM parties WHERE suite_coups = %s", (sym,))
+        cur.execute("SELECT id FROM parties WHERE coups = %s", (sym,))
         if not cur.fetchone():
-            cur.execute("INSERT INTO parties (date, vainqueur, suite_coups) VALUES (%s, %s, %s)",
-                        (datetime.now(), vainqueur, sym))
+            cur.execute("INSERT INTO parties (created_at, joueur_gagnant, coups, statut) VALUES (%s, %s, %s, %s)",
+                        (datetime.now(), vainqueur, sym, "TERMINEE"))
             etat = ""
             for coup in sym:
                 id_act = etat if etat else "start"
@@ -416,11 +431,13 @@ def api_rejouer(partie_id):
     if not conn: return jsonify({"erreur": "DB indisponible"})
     try:
         cur = conn.cursor()
-        cur.execute("SELECT suite_coups, vainqueur FROM parties WHERE id = %s", (partie_id,))
+        # MODIFIÉ : utilise les colonnes du CSV fusionné
+        cur.execute("SELECT coups, joueur_gagnant FROM parties WHERE id = %s", (partie_id,))
         r = cur.fetchone()
         cur.close(); conn.close()
         if not r: return jsonify({"erreur": "Partie introuvable"})
-        return jsonify({"sequence": r[0], "vainqueur": r[1]})
+        coups_str = r[0].replace("(", "").replace(")", "") if r[0] else ""
+        return jsonify({"sequence": coups_str, "vainqueur": r[1]})
     except Exception as e:
         return jsonify({"erreur": str(e)})
 
