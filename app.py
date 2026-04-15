@@ -12,13 +12,16 @@ LIGNES = 9
 COLS = 9
 ROUGE = "rouge"
 JAUNE = "jaune"
-PROFONDEUR = 4
+PROFONDEUR = 3
 
 # Bibliothèque d'ouvertures (premiers coups évidents - pas besoin de calcul)
 OUVERTURES = {
-    "": 4,  # Premier coup : centre
-    "4": 4, # Réponse au centre : centre aussi
-    "0": 4, "1": 4, "2": 4, "3": 4, "5": 4, "6": 4, "7": 4, "8": 4,  # Toujours centre
+    "": 4, "4": 4,
+    "0": 4, "1": 4, "2": 4, "3": 4, "5": 4, "6": 4, "7": 4, "8": 4,
+    "44": 3, "43": 4, "45": 4, "434": 5, "435": 3,
+    "40": 4, "41": 4, "42": 4, "46": 4, "47": 4, "48": 4,
+    "404": 5, "414": 5, "424": 5, "464": 3, "474": 3, "484": 3,
+    "04": 4, "14": 4, "24": 4, "34": 4, "54": 4, "64": 4, "74": 4, "84": 4,
 }
 
 # ══════════════════════════════════════════════
@@ -54,7 +57,7 @@ def stats_db():
     except:
         return {"parties": 0, "positions": 0}
 
-def get_parties_recentes(limit=20):
+def get_parties_recentes(limit=500):
     conn = get_db()
     if not conn: return []
     try:
@@ -78,7 +81,7 @@ def get_parties_recentes(limit=20):
         print(f"Erreur get_parties_recentes: {e}")
         return []
 
-def enregistrer_partie(sequence, vainqueur):
+def enregistrer_partie(sequence, vainqueur, nom=""):
     conn = get_db()
     if not conn: return
     try:
@@ -290,29 +293,109 @@ def calculer_poids_colonnes(plat, couleur=JAUNE):
     for c in libres:
         temp = copy.deepcopy(plat)
         jouer_coup(temp, c, couleur)
-        _, score = minimax(temp, PROFONDEUR-1, -math.inf, math.inf, False, couleur)
+        _, score = minimax(temp, 2, -math.inf, math.inf, False, couleur)
         poids[c] = score
     return poids
 
 def calculer_prediction(plat, couleur=JAUNE):
-    """Retourne la prédiction avec score et nombre de coups estimé"""
     libres = [c for c in range(COLS) if plat[0][c] is None]
-    if not libres: 
+    if not libres:
         return {"prediction": "nul", "score": 0, "coups_restants": 0, "joueur": couleur}
-    
-    _, score = minimax(copy.deepcopy(plat), 4, -math.inf, math.inf, True, couleur)
-    
+    # Victoire en 1 coup
+    for col in libres:
+        temp = copy.deepcopy(plat)
+        jouer_coup(temp, col, couleur)
+        v, _ = verifier_victoire(temp)
+        if v == couleur:
+            return {"prediction": "victoire", "score": 99000, "coups_restants": 1, "joueur": couleur}
+    # Défaite en 1 coup
+    adv = ROUGE if couleur == JAUNE else JAUNE
+    for col in libres:
+        temp = copy.deepcopy(plat)
+        jouer_coup(temp, col, adv)
+        v, _ = verifier_victoire(temp)
+        if v == adv:
+            return {"prediction": "defaite", "score": -99000, "coups_restants": 1, "joueur": couleur}
+    # Menaces à 1 coup
+    try:
+        menace_j, menace_adv = detecter_menace_immediate(plat, couleur)
+        if menace_j >= 2: return {"prediction": "victoire", "score": 80000, "coups_restants": 2, "joueur": couleur}
+        if menace_j >= 1 and menace_adv == 0: return {"prediction": "victoire", "score": 70000, "coups_restants": 2, "joueur": couleur}
+        if menace_adv >= 2: return {"prediction": "defaite", "score": -80000, "coups_restants": 2, "joueur": couleur}
+    except: pass
+    _, score = minimax(copy.deepcopy(plat), 3, -math.inf, math.inf, True, couleur)
     coups_restants = 0
     if abs(score) >= 50000:
         coups_restants = max(1, min(10, (100000 - abs(score)) // 12000 + 1))
-    
-    if score >= 50000: 
-        return {"prediction": "victoire", "score": score, "coups_restants": coups_restants, "joueur": couleur}
-    if score <= -50000: 
-        return {"prediction": "defaite", "score": score, "coups_restants": coups_restants, "joueur": couleur}
-    if len(libres) <= 5: 
-        return {"prediction": "nul", "score": score, "coups_restants": 0, "joueur": couleur}
+    if score >= 50000: return {"prediction": "victoire", "score": score, "coups_restants": coups_restants, "joueur": couleur}
+    if score <= -50000: return {"prediction": "defaite", "score": score, "coups_restants": coups_restants, "joueur": couleur}
+    if len(libres) <= 5: return {"prediction": "nul", "score": score, "coups_restants": 0, "joueur": couleur}
+    if score >= 2000: return {"prediction": "victoire", "score": score, "coups_restants": 0, "joueur": couleur}
+    if score <= -2000: return {"prediction": "defaite", "score": score, "coups_restants": 0, "joueur": couleur}
     return {"prediction": "incertaine", "score": score, "coups_restants": 0, "joueur": couleur}
+
+
+def detecter_menace_immediate(plat, couleur):
+    adv = ROUGE if couleur == JAUNE else JAUNE
+    menace_j, menace_adv = 0, 0
+    for r in range(LIGNES):
+        for c in range(COLS):
+            for dr, dc in [(0,1),(1,0),(1,1),(1,-1)]:
+                fen = []
+                for i in range(4):
+                    rr, cc = r+i*dr, c+i*dc
+                    if 0 <= rr < LIGNES and 0 <= cc < COLS:
+                        fen.append(plat[rr][cc])
+                if len(fen) == 4:
+                    if fen.count(couleur) == 3 and fen.count(None) == 1: menace_j += 1
+                    if fen.count(adv) == 3 and fen.count(None) == 1: menace_adv += 1
+    return menace_j, menace_adv
+
+def trouver_sequence_victoire(plat, couleur, prof=6):
+    adv = ROUGE if couleur == JAUNE else JAUNE
+    def dfs(p, c, depth, seq):
+        v, _ = verifier_victoire(p)
+        if v == couleur: return seq
+        if depth == 0: return None
+        libres = [col for col in range(COLS) if p[0][col] is None]
+        if not libres: return None
+        scored = []
+        for col in libres:
+            t = copy.deepcopy(p)
+            jouer_coup(t, col, c)
+            _, s = minimax(t, min(2, depth-1), -math.inf, math.inf, c == couleur, couleur)
+            scored.append((col, s))
+        scored.sort(key=lambda x: -x[1] if c == couleur else x[1])
+        for col, _ in scored[:4]:
+            temp = copy.deepcopy(p)
+            jouer_coup(temp, col, c)
+            v2, _ = verifier_victoire(temp)
+            if c == couleur and v2 == couleur: return seq + [col]
+            if c == adv and v2 == adv: continue
+            next_c = adv if c == couleur else couleur
+            result = dfs(temp, next_c, depth-1, seq + [col])
+            if result is not None: return result
+        return None
+    return dfs(plat, couleur, prof, [])
+
+@app.route("/api/sequence_victoire", methods=["POST"])
+def api_sequence_victoire():
+    try:
+        data = request.json
+        plat = data["plateau"]
+        joueur = data.get("joueur", JAUNE)
+        prof = data.get("profondeur", 5)
+        prediction = calculer_prediction(plat, joueur)
+        seq = trouver_sequence_victoire(plat, joueur, prof)
+        if seq is None: seq = []
+        return jsonify({
+            "sequence": seq,
+            "nb_coups": len(seq),
+            "prediction": prediction,
+            "joueur": joueur
+        })
+    except Exception as e:
+        return jsonify({"sequence": [], "nb_coups": 0, "prediction": {"prediction": "incertaine", "score": 0, "coups_restants": 0, "joueur": JAUNE}, "joueur": JAUNE, "erreur": str(e)})
 
 def reconstruire_plateau(sequence):
     plat = plateau_vide()
@@ -341,6 +424,10 @@ def api_jouer():
     joueur = data["joueur"]
     historique = data.get("historique", [])
     mode = data.get("mode", "ia_minimax")
+
+    if col == -99:
+        prediction = calculer_prediction(plat, joueur)
+        return jsonify({"prediction": prediction})
 
     ligne = jouer_coup(plat, col, joueur)
     if ligne == -1:
@@ -504,7 +591,8 @@ def api_raison_abandon():
 
 @app.route("/api/parties")
 def api_parties():
-    return jsonify(get_parties_recentes())
+    limit = request.args.get("limit", 500, type=int)
+    return jsonify(get_parties_recentes(limit))
 
 @app.route("/api/rejouer/<int:partie_id>")
 def api_rejouer(partie_id):
@@ -530,10 +618,30 @@ def api_sauvegarder():
     data = request.json
     sequence = data.get("sequence", "")
     vainqueur = data.get("vainqueur", "inconnu")
+    nom = data.get("nom", "")
     if not sequence:
         return jsonify({"erreur": "Séquence vide"})
-    enregistrer_partie(sequence, vainqueur)
+    enregistrer_partie(sequence, vainqueur, nom)
     return jsonify({"ok": True, "sequence": sequence, "vainqueur": vainqueur})
+
+@app.route("/api/renommer_partie", methods=["POST"])
+def api_renommer_partie():
+    data = request.json
+    sequence = data.get("sequence", "")
+    nom = data.get("nom", "")
+    conn = get_db()
+    if not conn: return jsonify({"erreur": "DB indisponible"})
+    try:
+        cur = conn.cursor()
+        try:
+            cur.execute("ALTER TABLE parties ADD COLUMN IF NOT EXISTS nom VARCHAR(100)")
+            conn.commit()
+        except: conn.rollback()
+        cur.execute("UPDATE parties SET nom = %s WHERE coups = %s", (nom, sequence))
+        conn.commit(); cur.close(); conn.close()
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"erreur": str(e)})
 
 @app.route("/api/bga", methods=["POST"])
 def api_bga():
