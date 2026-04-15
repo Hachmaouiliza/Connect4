@@ -1470,37 +1470,57 @@ function detecterJoueurAuto(){
 }
 
 async function analyserSituationAuto(){
+  const btn=document.querySelector('[onclick="analyserSituationAuto()"]');
+  btn.textContent='⏳ Analyse...';btn.disabled=true;
+
+  // 1. Vérifier si quelqu'un a déjà gagné
+  const dejagagne=verifierVictoireLocal(Sit.plateau);
+  if(dejagagne){
+    const nom=dejagagne==='rouge'?'Rouge':'Jaune';
+    const col=dejagagne==='rouge'?'#ff8899':'#ffe066';
+    document.getElementById('sit-winner').textContent='🏆 '+nom+' a déjà gagné !';
+    document.getElementById('sit-winner').style.color=col;
+    document.getElementById('sit-coup').textContent='—';
+    document.getElementById('sit-score').textContent='';
+    document.getElementById('sit-result').style.display='block';
+    btn.textContent='🔍 Analyser la situation';btn.disabled=false;
+    return;
+  }
+
   const joueur=detecterJoueurAuto();
   document.getElementById('sit-joueur').value=joueur;
   const prof=parseInt(document.getElementById('sit-prof').value);
-  const btn=document.querySelector('[onclick="analyserSituationAuto()"]');
-  btn.textContent='⏳ Analyse...';btn.disabled=true;
   try{
     const r=await fetch('/api/pinceau',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({plateau:Sit.plateau,historique:[],joueur,profondeur:prof})});
     const d=await r.json();
     Sit.colSurlignee=d.meilleur_coup;
     buildSitBoard();
-    document.getElementById('sit-coup').textContent='Colonne '+(d.meilleur_coup+1);
-    document.getElementById('sit-score').textContent='Source : '+d.source;
+
     const pred=typeof d.prediction==='object'?d.prediction.prediction:(d.prediction||'incertaine');
     const coups=typeof d.prediction==='object'?d.prediction.coups_restants||0:0;
     const joueurNom=joueur==='rouge'?'Rouge':'Jaune';
     const advNom=joueur==='rouge'?'Jaune':'Rouge';
     const winnerEl=document.getElementById('sit-winner');
+
+    let coupsLabel=coups>0?' en '+coups+' coup'+(coups>1?'s':''):'';
     if(pred==='victoire'){
-      winnerEl.textContent='🟢 '+joueurNom+' gagne'+(coups>0?' dans '+coups+' coup'+(coups>1?'s':''):'')+'!';
+      winnerEl.textContent='🔴 '+joueurNom+' gagne'+coupsLabel+' !';
       winnerEl.style.color=joueur==='rouge'?'#ff8899':'#ffe066';
     } else if(pred==='defaite'){
-      winnerEl.textContent='🔴 '+advNom+' gagne'+(coups>0?' dans '+coups+' coup'+(coups>1?'s':''):'')+'!';
+      winnerEl.textContent='🔴 '+advNom+' gagne'+coupsLabel+' !';
       winnerEl.style.color=joueur==='rouge'?'#ffe066':'#ff8899';
     } else if(pred==='nul'){
       winnerEl.textContent='🟡 Match nul probable';
       winnerEl.style.color='#ffc107';
     } else {
-      winnerEl.textContent='⚪ Position incertaine — tout peut basculer';
+      winnerEl.textContent='⚪ Position incertaine';
       winnerEl.style.color='rgba(255,248,240,0.5)';
     }
+
+    // Meilleur coup
+    document.getElementById('sit-coup').textContent='Colonne '+(d.meilleur_coup+1);
+    document.getElementById('sit-score').textContent='Source : '+d.source;
     document.getElementById('sit-result').style.display='block';
   }catch(e){alert('Erreur : '+e);}
   btn.textContent='🔍 Analyser la situation';btn.disabled=false;
