@@ -1427,7 +1427,7 @@ async function trouverSequenceVictoire(){
       d.sequence.forEach((col,i)=>{
         const step=document.createElement('div');
         const isJ=cj===joueur;
-        step.style.cssText='padding:4px 10px;border-radius:20px;font-family:'Fredoka One',cursive;font-size:0.78rem;';
+        step.style.cssText="padding:4px 10px;border-radius:20px;font-family:'Fredoka One',cursive;font-size:0.78rem;";
         step.style.background=isJ?(joueur==='rouge'?'rgba(255,34,68,0.3)':'rgba(255,193,7,0.25)'):'rgba(255,255,255,0.08)';
         step.style.border=isJ?(joueur==='rouge'?'1px solid rgba(255,34,68,0.6)':'1px solid rgba(255,193,7,0.5)'):'1px solid rgba(255,255,255,0.15)';
         step.style.color=isJ?(joueur==='rouge'?'#ff8899':'#ffe066'):'rgba(255,248,240,0.5)';
