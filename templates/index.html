@@ -1335,26 +1335,10 @@ function showModal(v){
   const nom=typeof nomJoueur==='function'?nomJoueur(v):(v==='rouge'?'Rouge':'Jaune');
   document.getElementById('micon').textContent=v==='rouge'?'🔴':'🟡';
   document.getElementById('mtitle').textContent=`${nom} gagne !`;
-  document.getElementById('nom-partie').value='';
   document.getElementById('modal').classList.add('show');
-  // Sauvegarder automatiquement (sans nom pour l'instant)
   const seq=G.historique.join('');
   if(seq) fetch('/api/sauvegarder',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({sequence:seq,vainqueur:v,nom:''})}).then(()=>refreshStats());
-  // Stocker vainqueur pour sauvegarder avec nom au clic
-  document.getElementById('modal').dataset.vainqueur=v;
-}
-
-function nouvellePartieDepuisModal(){
-  const nomSaisi=document.getElementById('nom-partie').value.trim();
-  const vainqueur=document.getElementById('modal').dataset.vainqueur||'';
-  const seq=G.historique.join('');
-  if(nomSaisi && seq){
-    // Mettre à jour le nom en DB
-    fetch('/api/renommer_partie',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({sequence:seq,nom:nomSaisi,vainqueur})}).catch(()=>{});
-  }
-  nouvellePartie();
+    body:JSON.stringify({sequence:seq,vainqueur:v})}).then(()=>refreshStats());
 }
 
 async function sauvegarderPartie(){
