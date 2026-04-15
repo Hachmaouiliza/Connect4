@@ -509,7 +509,8 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
 
       <!-- IMPORT FICHIER TEXTE -->
       <div class="sit-section">Importer une séquence</div>
-      <input class="minput" id="sit-seq-input" placeholder="Ex: 44352617..." style="margin-bottom:6px;font-size:0.82rem">
+      <input class="minput" id="sit-seq-input" placeholder="Ex: 44352617..." style="margin-bottom:6px;font-size:0.82rem" onkeydown="if(event.key==='Enter')chargerSeqCheat()">
+      <input type="file" id="sit-seq-file" accept=".txt" style="color:rgba(255,248,240,0.6);font-size:0.72rem;margin-bottom:6px" onchange="chargerFichierSeqCheat(this)">
       <button class="abtn" style="background:linear-gradient(155deg,#8e44ad,#6c3483);box-shadow:0 4px 0 #3d1a5e;margin-bottom:8px" onclick="chargerSeqCheat()">📂 Charger séquence</button>
 
       <div class="sit-section">Pion à placer (pinceau)</div>
@@ -518,11 +519,7 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
       <button class="pcbtn" id="sit-btn-e" onclick="setSitPC('effacer')">✕ Effacer</button>
 
       <div class="sit-section" style="margin-top:8px">Analyser</div>
-      <div style="font-size:0.68rem;color:rgba(255,248,240,0.45);margin-bottom:4px">Analyser pour quel joueur ?</div>
-      <select class="sit-select" id="sit-joueur" style="margin-bottom:8px">
-        <option value="rouge">🔴 Rouge joue</option>
-        <option value="jaune">🟡 Jaune joue</option>
-      </select>
+      <select id="sit-joueur" style="display:none"><option value="rouge">rouge</option><option value="jaune">jaune</option></select>
       <select class="sit-select" id="sit-prof" style="margin-bottom:8px">
         <option value="3">3 — Rapide</option>
         <option value="4">4 — Fort</option>
@@ -534,11 +531,12 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
 
       <!-- RÉSULTAT ANALYSE -->
       <div class="sit-result" id="sit-result">
-        <div id="sit-winner" style="font-family:'Fredoka One',cursive;font-size:1.2rem;text-align:center;margin-bottom:6px"></div>
-        <div style="font-size:0.68rem;font-weight:800;color:rgba(0,188,212,0.7);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Meilleur coup</div>
+        <div id="sit-winner" style="font-family:'Fredoka One',cursive;font-size:1.2rem;text-align:center;margin-bottom:8px"></div>
+        <div style="font-size:0.68rem;font-weight:800;color:rgba(0,188,212,0.7);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Meilleur coup maintenant</div>
         <div class="sit-result-coup" id="sit-coup">—</div>
-        <div style="font-size:0.72rem;color:rgba(255,248,240,0.5);text-align:center" id="sit-score"></div>
-        <div style="font-size:0.78rem;font-weight:700;text-align:center;margin-top:6px" id="sit-pred"></div>
+        <div style="font-size:0.72rem;color:rgba(255,248,240,0.5);text-align:center;margin-bottom:8px" id="sit-score"></div>
+        <div style="font-size:0.68rem;font-weight:800;color:rgba(0,188,212,0.7);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px" id="sit-seq-title" style="display:none">Séquence gagnante</div>
+        <div id="sit-seq-steps" style="display:flex;flex-wrap:wrap;gap:4px"></div>
       </div>
 
 
@@ -688,23 +686,37 @@ async function analyserSituation(){
   btn.textContent='🔍 Analyser (meilleur coup + prédiction)';btn.disabled=false;
 }
 
-function chargerSeqCheat(){
-  const seq=document.getElementById('sit-seq-input').value.trim().replace(/[^0-8]/g,'');
-  if(!seq){alert('Entre une séquence valide (chiffres 0-8)');return;}
+function appliquerSequenceCheat(seq){
+  if(!seq){alert('Séquence vide ou invalide (chiffres 0-8)');return;}
   Sit.plateau=Array(9).fill(null).map(()=>Array(9).fill(null));
   const joueurs=['rouge','jaune'];
   for(let i=0;i<seq.length;i++){
     const c=parseInt(seq[i]);
+    if(c<0||c>8)continue;
     for(let r=8;r>=0;r--){if(Sit.plateau[r][c]===null){Sit.plateau[r][c]=joueurs[i%2];break;}}
   }
-  // Détecter à qui de jouer
   let rr=0,jj=0;
   for(let r=0;r<9;r++)for(let c=0;c<9;c++){if(Sit.plateau[r][c]==='rouge')rr++;else if(Sit.plateau[r][c]==='jaune')jj++;}
   document.getElementById('sit-joueur').value=rr===jj?'rouge':'jaune';
   Sit.colSurlignee=null;
   document.getElementById('sit-result').style.display='none';
-  document.getElementById('sit-seq-result').style.display='none';
   buildSitBoard();
+}
+
+function chargerSeqCheat(){
+  const seq=document.getElementById('sit-seq-input').value.trim().replace(/[^0-8]/g,'');
+  appliquerSequenceCheat(seq);
+}
+
+function chargerFichierSeqCheat(input){
+  if(!input.files.length)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const seq=e.target.result.trim().replace(/[^0-8]/g,'');
+    document.getElementById('sit-seq-input').value=seq;
+    appliquerSequenceCheat(seq);
+  };
+  reader.readAsText(input.files[0]);
 }
 
 
@@ -1452,6 +1464,19 @@ function continuerDepuisCheat(mode){
   else if(mode==='hvi'&&G.joueur!==G.couleurHumain) setTimeout(()=>jouerIA(G.joueur),500);
 }
 
+function setSitJoueur(j){
+  document.getElementById('sit-joueur').value=j;
+  const r=document.getElementById('sit-j-rouge');
+  const jj=document.getElementById('sit-j-jaune');
+  if(j==='rouge'){
+    r.style.borderColor='rgba(255,34,68,0.8)';r.style.background='rgba(255,34,68,0.35)';
+    jj.style.borderColor='transparent';jj.style.background='rgba(255,193,7,0.1)';
+  } else {
+    jj.style.borderColor='rgba(255,193,7,0.8)';jj.style.background='rgba(255,193,7,0.25)';
+    r.style.borderColor='transparent';r.style.background='rgba(255,34,68,0.1)';
+  }
+}
+
 function detecterJoueurAuto(){
   // Compte les pions pour détecter à qui de jouer
   let r=0,j=0;
@@ -1462,11 +1487,11 @@ function detecterJoueurAuto(){
   return r===j?'rouge':'jaune'; // rouge commence toujours
 }
 
-async function analyserSituationAuto(){
-  const btn=document.querySelector('[onclick="analyserSituationAuto()"]');
+async function analyserComplet(){
+  const btn=document.querySelector('[onclick="analyserComplet()"]');
   btn.textContent='⏳ Analyse...';btn.disabled=true;
 
-  // 1. Vérifier si quelqu'un a déjà gagné
+  // Vérifier si déjà gagné
   const dejagagne=verifierVictoireLocal(Sit.plateau);
   if(dejagagne){
     const nom=dejagagne==='rouge'?'Rouge':'Jaune';
@@ -1475,18 +1500,97 @@ async function analyserSituationAuto(){
     document.getElementById('sit-winner').style.color=col;
     document.getElementById('sit-coup').textContent='—';
     document.getElementById('sit-score').textContent='';
+    document.getElementById('sit-seq-steps').innerHTML='';
+    document.getElementById('sit-result').style.display='block';
+    btn.textContent='🔍 Analyser';btn.disabled=false;
+    return;
+  }
+
+  const prof=parseInt(document.getElementById('sit-prof').value);
+  try{
+    const r=await fetch('/api/analyser_complet',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({plateau:Sit.plateau,profondeur:prof})});
+    const d=await r.json();
+    if(d.erreur){alert('Erreur: '+d.erreur);btn.textContent='🔍 Analyser';btn.disabled=false;return;}
+
+    // Afficher gagnant
+    const winnerEl=document.getElementById('sit-winner');
+    if(d.gagnant){
+      const nom=d.gagnant==='rouge'?'Rouge':'Jaune';
+      const couleur=d.gagnant==='rouge'?'#ff8899':'#ffe066';
+      const coupsLabel=d.coups_restants>0?' dans '+d.coups_restants+' coup'+(d.coups_restants>1?'s':''):'';
+      winnerEl.textContent='🟢 '+nom+' gagne'+coupsLabel+' !';
+      winnerEl.style.color=couleur;
+    } else {
+      winnerEl.textContent='⚪ Position incertaine';
+      winnerEl.style.color='rgba(255,248,240,0.5)';
+    }
+
+    // Meilleur coup
+    document.getElementById('sit-coup').textContent=d.meilleur_coup!=null?'Colonne '+(d.meilleur_coup+1):'—';
+    document.getElementById('sit-score').textContent='Source : '+d.source;
+
+    // Surligner colonne
+    Sit.colSurlignee=d.meilleur_coup;
+    buildSitBoard();
+
+    // Afficher séquence
+    const stepsDiv=document.getElementById('sit-seq-steps');
+    stepsDiv.innerHTML='';
+    if(d.sequence&&d.sequence.length>0){
+      document.getElementById('sit-seq-title').style.display='block';
+      let cj=d.joueur_actuel;
+      d.sequence.forEach((col,i)=>{
+        const step=document.createElement('div');
+        const isGagnant=cj===d.gagnant;
+        step.style.cssText="padding:4px 10px;border-radius:20px;font-family:'Fredoka One',cursive;font-size:0.78rem;margin:2px;";
+        step.style.background=cj==='rouge'?'rgba(255,34,68,0.3)':'rgba(255,193,7,0.25)';
+        step.style.border=cj==='rouge'?'1px solid rgba(255,34,68,0.6)':'1px solid rgba(255,193,7,0.5)';
+        step.style.color=cj==='rouge'?'#ff8899':'#ffe066';
+        step.textContent=(i+1)+'. Col.'+(col+1);
+        stepsDiv.appendChild(step);
+        cj=cj==='rouge'?'jaune':'rouge';
+      });
+    }
+
+    document.getElementById('sit-result').style.display='block';
+  }catch(e){alert('Erreur : '+e);}
+  btn.textContent='🔍 Analyser';btn.disabled=false;
+}
+
+async function analyserSituationAuto(){
+  const btn=document.querySelector('[onclick="analyserSituationAuto()"]');
+  btn.textContent='⏳ Analyse...';btn.disabled=true;
+
+  // 1. Vérifier si quelqu'un a déjà gagné
+  const dejagagne=verifierVictoireLocal(Sit.plateau);
+  if(dejagagne){
+    const nom=dejagagne==='rouge'?'Rouge':'Jaune';
+    const coulGagne=dejagagne==='rouge'?'#ff8899':'#ffe066';
+    document.getElementById('sit-winner').textContent='🏆 '+nom+' a déjà gagné !';
+    document.getElementById('sit-winner').style.color=coulGagne;
+    document.getElementById('sit-coup').textContent='—';
+    document.getElementById('sit-score').textContent='';
     document.getElementById('sit-result').style.display='block';
     btn.textContent='🔍 Analyser la situation';btn.disabled=false;
     return;
   }
 
+  // L'IA détecte automatiquement à qui de jouer selon le plateau
   const joueur=detecterJoueurAuto();
-  document.getElementById('sit-joueur').value=joueur;
   const prof=parseInt(document.getElementById('sit-prof').value);
+
   try{
-    const r=await fetch('/api/pinceau',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({plateau:Sit.plateau,historique:[],joueur,profondeur:prof})});
-    const d=await r.json();
+    // Analyser les 2 joueurs en parallèle
+    const [dr,dj]=await Promise.all([
+      fetch('/api/pinceau',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({plateau:Sit.plateau,historique:[],joueur:'rouge',profondeur:prof})}).then(r=>r.json()),
+      fetch('/api/pinceau',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({plateau:Sit.plateau,historique:[],joueur:'jaune',profondeur:prof})}).then(r=>r.json())
+    ]);
+
+    // Prendre la prédiction du joueur qui joue
+    const d=joueur==='rouge'?dr:dj;
     Sit.colSurlignee=d.meilleur_coup;
     buildSitBoard();
 
@@ -1495,10 +1599,10 @@ async function analyserSituationAuto(){
     const joueurNom=joueur==='rouge'?'Rouge':'Jaune';
     const advNom=joueur==='rouge'?'Jaune':'Rouge';
     const winnerEl=document.getElementById('sit-winner');
+    let coupsLabel=coups>0?' dans '+coups+' coup'+(coups>1?'s':''):'';
 
-    let coupsLabel=coups>0?' en '+coups+' coup'+(coups>1?'s':''):'';
     if(pred==='victoire'){
-      winnerEl.textContent='🔴 '+joueurNom+' gagne'+coupsLabel+' !';
+      winnerEl.textContent='🟢 '+joueurNom+' gagne'+coupsLabel+' !';
       winnerEl.style.color=joueur==='rouge'?'#ff8899':'#ffe066';
     } else if(pred==='defaite'){
       winnerEl.textContent='🔴 '+advNom+' gagne'+coupsLabel+' !';
@@ -1511,9 +1615,8 @@ async function analyserSituationAuto(){
       winnerEl.style.color='rgba(255,248,240,0.5)';
     }
 
-    // Meilleur coup
     document.getElementById('sit-coup').textContent='Colonne '+(d.meilleur_coup+1);
-    document.getElementById('sit-score').textContent='Source : '+d.source;
+    document.getElementById('sit-score').textContent=joueurNom+' joue — source : '+d.source;
     document.getElementById('sit-result').style.display='block';
   }catch(e){alert('Erreur : '+e);}
   btn.textContent='🔍 Analyser la situation';btn.disabled=false;
