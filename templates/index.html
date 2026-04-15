@@ -518,11 +518,10 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
       <button class="pcbtn" id="sit-btn-e" onclick="setSitPC('effacer')">✕ Effacer</button>
 
       <div class="sit-section" style="margin-top:8px">Analyser</div>
-      <div style="font-size:0.68rem;color:rgba(255,248,240,0.45);margin-bottom:6px">Le joueur est détecté automatiquement selon le nombre de pions.</div>
-      <!-- select caché pour compatibilité JS -->
-      <select id="sit-joueur" style="display:none">
-        <option value="rouge">Rouge</option>
-        <option value="jaune">Jaune</option>
+      <div style="font-size:0.68rem;color:rgba(255,248,240,0.45);margin-bottom:4px">Analyser pour quel joueur ?</div>
+      <select class="sit-select" id="sit-joueur" style="margin-bottom:8px">
+        <option value="rouge">🔴 Rouge joue</option>
+        <option value="jaune">🟡 Jaune joue</option>
       </select>
       <select class="sit-select" id="sit-prof" style="margin-bottom:8px">
         <option value="3">3 — Rapide</option>
@@ -531,7 +530,7 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
         <option value="6">6 — Expert</option>
       </select>
       <button class="abtn" onclick="analyserSituationAuto()">🔍 Analyser la situation</button>
-      <button class="abtn" style="margin-top:6px;background:linear-gradient(155deg,#7b1fa2,#4a0072);box-shadow:0 4px 0 #2a0042" id="btn-seq-victoire" onclick="trouverSequenceVictoireAuto()">🏆 Trouver la séquence gagnante</button>
+
 
       <!-- RÉSULTAT ANALYSE -->
       <div class="sit-result" id="sit-result">
@@ -542,13 +541,7 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
         <div style="font-size:0.78rem;font-weight:700;text-align:center;margin-top:6px" id="sit-pred"></div>
       </div>
 
-      <!-- SÉQUENCE DE VICTOIRE -->
-      <div id="sit-seq-result" style="display:none;background:linear-gradient(155deg,#001a2e,#002a40);border:2px solid rgba(0,188,212,0.4);border-radius:10px;padding:12px;margin-top:6px">
-        <div style="font-size:0.68rem;font-weight:800;color:rgba(0,188,212,0.7);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">🏆 Séquence vers la victoire</div>
-        <div id="sit-seq-label" style="font-size:0.8rem;font-weight:700;color:#4dd0e1;margin-bottom:8px"></div>
-        <div id="sit-seq-steps" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px"></div>
-        <button style="width:100%;padding:8px;border:none;border-radius:8px;background:linear-gradient(135deg,#1a6b3a,#0d4a27);color:white;font-family:'Fredoka One',cursive;font-size:0.85rem;cursor:pointer" onclick="rejouerSequenceCheat()">▶ Rejouer sur le plateau principal</button>
-      </div>
+
 
       <div class="sit-section" style="margin-top:8px">▶ Continuer la partie</div>
       <div style="font-size:0.68rem;color:rgba(255,248,240,0.45);margin-bottom:6px">Utilise le joueur détecté automatiquement</div>
