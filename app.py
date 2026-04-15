@@ -418,6 +418,7 @@ def reconstruire_plateau(sequence):
 # ══════════════════════════════════════════════
 @app.route("/")
 def index():
+    init_db()
     return render_template("index.html", stats=stats_db())
 
 @app.route("/api/stats")
@@ -693,6 +694,17 @@ def api_bga():
     except Exception as e:
         return jsonify({"erreur": f"Erreur : {str(e)}"})
 
+def init_db():
+    """Ajoute la colonne nom si elle n'existe pas"""
+    conn = get_db()
+    if not conn: return
+    try:
+        cur = conn.cursor()
+        cur.execute("ALTER TABLE parties ADD COLUMN IF NOT EXISTS nom VARCHAR(100)")
+        conn.commit(); cur.close(); conn.close()
+    except: pass
+
 if __name__ == "__main__":
+    init_db()
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, host="0.0.0.0", port=port)

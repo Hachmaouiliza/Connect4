@@ -248,9 +248,8 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
   <div class="mbox">
     <span class="micon" id="micon">🔴</span>
     <div class="mtitle" id="mtitle">Rouge gagne !</div>
-    <div class="msub">Donne un nom à cette partie (optionnel)</div>
-    <input class="minput" id="nom-partie" placeholder="Ex: Tournoi BGA · Lisa vs Lysa" style="margin-bottom:14px;text-align:center;font-size:0.85rem">
-    <button class="mbtn-modal" onclick="nouvellePartieDepuisModal()">Rejouer !</button>
+    <div class="msub">Partie sauvegardée en base de données ✅</div>
+    <button class="mbtn-modal" onclick="nouvellePartie()">Rejouer !</button>
   </div>
 </div>
 
@@ -899,10 +898,7 @@ async function jouerIA(couleur){
       if(d.meilleur_coup!==undefined)G.bestCol=d.meilleur_coup;
       refreshW();
       if(d.prediction)refreshPred(d.prediction);
-      document.getElementById('suggcard').style.display='block';
-      document.getElementById('suggcol').textContent=`Colonne ${d.meilleur_coup+1}`;
-      const srcLabels={'memoire':'base de données','minimax':'calcul minimax','ouverture':'bibliothèque','blocage':'blocage urgent'};
-      document.getElementById('suggsrc').textContent=srcLabels[d.source]||d.source;
+      // suggcard masqué - s'affiche seulement sur demande
     }).catch(()=>{});
   }
 }
