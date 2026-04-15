@@ -550,7 +550,11 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
         <button style="width:100%;padding:8px;border:none;border-radius:8px;background:linear-gradient(135deg,#1a6b3a,#0d4a27);color:white;font-family:'Fredoka One',cursive;font-size:0.85rem;cursor:pointer" onclick="rejouerSequenceCheat()">▶ Rejouer sur le plateau principal</button>
       </div>
 
-      <div class="sit-section" style="margin-top:8px">Actions</div>
+      <div class="sit-section" style="margin-top:8px">▶ Continuer la partie</div>
+      <div style="font-size:0.68rem;color:rgba(255,248,240,0.45);margin-bottom:6px">Utilise le joueur détecté automatiquement</div>
+      <button class="pcbtn" onclick="continuerDepuisCheat('hvh')" style="margin-bottom:4px">👥 2 Joueurs</button>
+      <button class="pcbtn" onclick="continuerDepuisCheat('hvi')" style="margin-bottom:4px">🤖 Humain vs IA</button>
+      <button class="pcbtn" onclick="continuerDepuisCheat('ivi')" style="margin-bottom:8px">⚔️ IA vs IA</button>
       <button class="ebtn" onclick="effacerSituation()">🗑️ Effacer le plateau</button>
     </div>
 
@@ -1418,6 +1422,42 @@ async function abandonnerPartie(){
 }
 
 let sitSeqGlobale=[];
+
+function continuerDepuisCheat(mode){
+  // Copier le plateau du cheat mode vers le plateau principal
+  G.plateau=JSON.parse(JSON.stringify(Sit.plateau));
+  G.historique=[];G.fin=false;G.locked=false;
+  // Détecter à qui de jouer
+  let r=0,j=0;
+  for(let row=0;row<9;row++) for(let c=0;c<9;c++){
+    if(G.plateau[row][c]==='rouge')r++;
+    else if(G.plateau[row][c]==='jaune')j++;
+  }
+  G.joueur=r===j?'rouge':'jaune';
+  G.nbCoups=r+j;
+  // Appliquer le mode
+  G.gameMode=mode;
+  document.querySelectorAll('[data-gamemode]').forEach(b=>b.classList.remove('active'));
+  const modeBtn=document.querySelector('[data-gamemode="'+mode+'"]');
+  if(modeBtn) modeBtn.classList.add('active');
+  if(mode==='hvh'){
+    G.couleurHumain=G.joueur;
+    document.getElementById('ia-mode-wrap').style.display='none';
+    document.getElementById('couleur-wrap').style.display='flex';
+  } else if(mode==='hvi'){
+    G.couleurHumain=G.joueur;
+    document.getElementById('ia-mode-wrap').style.display='block';
+    document.getElementById('couleur-wrap').style.display='flex';
+  } else {
+    document.getElementById('ia-mode-wrap').style.display='block';
+    document.getElementById('couleur-wrap').style.display='none';
+  }
+  // Aller sur l'onglet jeu
+  switchTab('jeu',document.querySelectorAll('.tab')[0]);
+  buildBoard();refreshBoard([]);refreshTurn();
+  if(mode==='ivi') setTimeout(iaVsIa,800);
+  else if(mode==='hvi'&&G.joueur!==G.couleurHumain) setTimeout(()=>jouerIA(G.joueur),500);
+}
 
 function detecterJoueurAuto(){
   // Compte les pions pour détecter à qui de jouer

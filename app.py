@@ -12,7 +12,7 @@ LIGNES = 9
 COLS = 9
 ROUGE = "rouge"
 JAUNE = "jaune"
-PROFONDEUR = 3
+PROFONDEUR = 5
 
 # Bibliothèque d'ouvertures (premiers coups évidents - pas besoin de calcul)
 OUVERTURES = {
@@ -529,14 +529,30 @@ def api_suggestion():
 def api_pinceau():
     data = request.json
     plat = data["plateau"]
-    historique = data.get("historique", [])
     joueur = data.get("joueur", JAUNE)
     prof = data.get("profondeur", PROFONDEUR)
-    col, source = meilleur_coup_ia(plat, historique, couleur=joueur)
-    if source in ("minimax", "blocage", "random"):
-        col2, _ = minimax(copy.deepcopy(plat), prof, -math.inf, math.inf, True, joueur)
-        if col2 is not None: col = col2
+
+    # Cheat Mode : toujours utiliser minimax complet, jamais les ouvertures
+    # 1. Victoire immédiate ?
+    libres = [c for c in range(COLS) if plat[0][c] is None]
+    col, source = None, "minimax"
+    for c in libres:
+        temp = copy.deepcopy(plat)
+        jouer_coup(temp, c, joueur)
+        v, _ = verifier_victoire(temp)
+        if v == joueur:
+            col, source = c, "victoire_immediate"
+            break
+    # 2. Blocage urgent ?
+    if col is None:
+        col_bloc = coup_urgent(plat, joueur)
+        if col_bloc is not None:
+            col, source = col_bloc, "blocage_urgent"
+    # 3. Minimax complet
+    if col is None:
+        col, _ = minimax(copy.deepcopy(plat), prof, -math.inf, math.inf, True, joueur)
         source = "minimax"
+
     prediction = calculer_prediction(plat, joueur)
     return jsonify({
         "meilleur_coup": col,
