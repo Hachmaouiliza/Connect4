@@ -680,92 +680,7 @@ async function analyserSituation(){
   btn.textContent='🔍 Analyser (meilleur coup)';btn.disabled=false;
 }
 
-let sitSeqGlobale = [];
 
-async function trouverSequenceVictoire(){
-  const joueur=document.getElementById('sit-joueur').value;
-  const prof=parseInt(document.getElementById('sit-prof').value);
-  const btn=document.getElementById('btn-seq-victoire');
-  btn.textContent='⏳ Recherche...';btn.disabled=true;
-  document.getElementById('sit-seq-result').style.display='none';
-  try{
-    const r=await fetch('/api/sequence_victoire',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({plateau:Sit.plateau,joueur,profondeur:prof})});
-    const d=await r.json();
-    if(d.sequence && d.sequence.length>0){
-      sitSeqGlobale=d.sequence;
-      const joueurNom=joueur==='rouge'?'Rouge':'Jaune';
-      document.getElementById('sit-seq-label').textContent=`${joueurNom} gagne dans ${d.sequence.length} coup${d.sequence.length>1?'s':''}`;
-      const stepsDiv=document.getElementById('sit-seq-steps');
-      stepsDiv.innerHTML='';
-      const adv=joueur==='rouge'?'jaune':'rouge';
-      let currentJoueur=joueur;
-      d.sequence.forEach((col,i)=>{
-        const step=document.createElement('div');
-        const isJoueur=currentJoueur===joueur;
-        step.style.cssText=`padding:4px 10px;border-radius:20px;font-family:'Fredoka One',cursive;font-size:0.78rem;cursor:pointer;transition:all .15s;`;
-        step.style.background=isJoueur?(joueur==='rouge'?'rgba(255,34,68,0.3)':'rgba(255,193,7,0.25)'):'rgba(255,255,255,0.08)';
-        step.style.border=isJoueur?(joueur==='rouge'?'1px solid rgba(255,34,68,0.6)':'1px solid rgba(255,193,7,0.5)'):'1px solid rgba(255,255,255,0.15)';
-        step.style.color=isJoueur?(joueur==='rouge'?'#ff8899':'#ffe066'):'rgba(255,248,240,0.5)';
-        step.textContent=`${i+1}. Col.${col+1}`;
-        stepsDiv.appendChild(step);
-        currentJoueur=currentJoueur==='rouge'?'jaune':'rouge';
-      });
-      document.getElementById('sit-seq-result').style.display='block';
-    } else {
-      document.getElementById('sit-seq-label').textContent='Aucune victoire trouvée à cette profondeur.';
-      document.getElementById('sit-seq-steps').innerHTML='<div style="font-size:0.72rem;color:rgba(255,248,240,0.4)">Essaie une profondeur plus grande.</div>';
-      document.getElementById('sit-seq-result').style.display='block';
-    }
-  }catch(e){alert('Erreur : '+e);}
-  btn.textContent='🏆 Trouver la victoire';btn.disabled=false;
-}
-
-function rejouerSequenceCheat(){
-  if(!sitSeqGlobale.length)return;
-  // Copier le plateau peint dans G et rejouer la séquence
-  G.plateau=JSON.parse(JSON.stringify(Sit.plateau));
-  G.historique=[];G.fin=false;G.locked=false;G.nbCoups=0;
-  // Détecter à qui de jouer
-  let r=0,j2=0;
-  for(let row=0;row<9;row++)for(let c=0;c<9;c++){if(G.plateau[row][c]==='rouge')r++;else if(G.plateau[row][c]==='jaune')j2++;}
-  G.joueur=r===j2?'rouge':'jaune';
-  buildBoard();refreshBoard([]);refreshTurn();
-  switchTab('jeu',document.querySelectorAll('.tab')[0]);
-  // Rejouer la séquence avec délai
-  let i=0;
-  const seqTimer=setInterval(()=>{
-    if(i>=sitSeqGlobale.length){clearInterval(seqTimer);G.locked=false;return;}
-    const col=sitSeqGlobale[i];
-    const jj=G.joueur;
-    for(let row=8;row>=0;row--){if(G.plateau[row][col]===null){G.plateau[row][col]=jj;G.historique.push(col);break;}}
-    G.joueur=jj==='rouge'?'jaune':'rouge';G.nbCoups++;
-    refreshLM(jj,col);refreshBoard([]);refreshTurn();
-    const v=verifierVictoireLocal(G.plateau);
-    if(v){clearInterval(seqTimer);G.fin=true;setTimeout(()=>showModal(v),400);return;}
-    i++;
-  },600);
-}
-
-// Analyse sur demande (bouton dans le panneau droit)
-async function analyserMaintenant(){
-  if(G.fin)return;
-  const btn=document.querySelector('[onclick="analyserMaintenant()"]');
-  btn.textContent='⏳...';btn.disabled=true;
-  try{
-    const r=await fetch('/api/suggestion',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({plateau:G.plateau,historique:G.historique,joueur:G.joueur})});
-    const d=await r.json();
-    G.poids=d.poids_colonnes;G.bestCol=d.meilleur_coup;
-    refreshW();
-    if(d.prediction)refreshPred(d.prediction);
-    document.getElementById('suggcard').style.display='block';
-    document.getElementById('suggcol').textContent=`Colonne ${d.meilleur_coup+1}`;
-    const srcLabels={'memoire':'base de données','minimax':'calcul minimax','ouverture':'bibliothèque','blocage':'blocage urgent'};
-    document.getElementById('suggsrc').textContent=srcLabels[d.source]||d.source;
-  }catch(e){}
-  btn.textContent='🔍 Analyser maintenant';btn.disabled=false;
-}
 
 // ══════════════════════
 // BOARD
@@ -1489,6 +1404,67 @@ async function abandonnerPartie(){
     refreshStats();
     nouvellePartie();
   });
+}
+
+let sitSeqGlobale=[];
+
+async function trouverSequenceVictoire(){
+  const joueur=document.getElementById('sit-joueur').value;
+  const prof=parseInt(document.getElementById('sit-prof').value);
+  const btn=document.getElementById('btn-seq-victoire');
+  btn.textContent='⏳ Recherche...';btn.disabled=true;
+  document.getElementById('sit-seq-result').style.display='none';
+  try{
+    const r=await fetch('/api/sequence_victoire',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({plateau:Sit.plateau,joueur,profondeur:prof})});
+    const d=await r.json();
+    if(d.sequence&&d.sequence.length>0){
+      sitSeqGlobale=d.sequence;
+      const jn=joueur==='rouge'?'Rouge':'Jaune';
+      document.getElementById('sit-seq-label').textContent=`${jn} gagne dans ${d.sequence.length} coup${d.sequence.length>1?'s':''}`;
+      const stepsDiv=document.getElementById('sit-seq-steps');stepsDiv.innerHTML='';
+      let cj=joueur;
+      d.sequence.forEach((col,i)=>{
+        const step=document.createElement('div');
+        const isJ=cj===joueur;
+        step.style.cssText='padding:4px 10px;border-radius:20px;font-family:'Fredoka One',cursive;font-size:0.78rem;';
+        step.style.background=isJ?(joueur==='rouge'?'rgba(255,34,68,0.3)':'rgba(255,193,7,0.25)'):'rgba(255,255,255,0.08)';
+        step.style.border=isJ?(joueur==='rouge'?'1px solid rgba(255,34,68,0.6)':'1px solid rgba(255,193,7,0.5)'):'1px solid rgba(255,255,255,0.15)';
+        step.style.color=isJ?(joueur==='rouge'?'#ff8899':'#ffe066'):'rgba(255,248,240,0.5)';
+        step.textContent=`${i+1}. Col.${col+1}`;
+        stepsDiv.appendChild(step);
+        cj=cj==='rouge'?'jaune':'rouge';
+      });
+      document.getElementById('sit-seq-result').style.display='block';
+    } else {
+      document.getElementById('sit-seq-label').textContent='Aucune victoire trouvée. Essaie profondeur 6.';
+      document.getElementById('sit-seq-steps').innerHTML='';
+      document.getElementById('sit-seq-result').style.display='block';
+    }
+  }catch(e){alert('Erreur : '+e);}
+  btn.textContent='🏆 Trouver la victoire';btn.disabled=false;
+}
+
+function rejouerSequenceCheat(){
+  if(!sitSeqGlobale.length)return;
+  G.plateau=JSON.parse(JSON.stringify(Sit.plateau));
+  G.historique=[];G.fin=false;G.locked=false;G.nbCoups=0;
+  let rr=0,jj=0;
+  for(let row=0;row<9;row++)for(let c=0;c<9;c++){if(G.plateau[row][c]==='rouge')rr++;else if(G.plateau[row][c]==='jaune')jj++;}
+  G.joueur=rr===jj?'rouge':'jaune';
+  buildBoard();refreshBoard([]);refreshTurn();
+  switchTab('jeu',document.querySelectorAll('.tab')[0]);
+  let i=0;
+  const t=setInterval(()=>{
+    if(i>=sitSeqGlobale.length){clearInterval(t);G.locked=false;return;}
+    const col=sitSeqGlobale[i],j=G.joueur;
+    for(let row=8;row>=0;row--){if(G.plateau[row][col]===null){G.plateau[row][col]=j;G.historique.push(col);break;}}
+    G.joueur=j==='rouge'?'jaune':'rouge';G.nbCoups++;
+    refreshLM(j,col);refreshBoard([]);refreshTurn();
+    const v=verifierVictoireLocal(G.plateau);
+    if(v){clearInterval(t);G.fin=true;setTimeout(()=>showModal(v),400);return;}
+    i++;
+  },600);
 }
 
 async function refreshStats(){
