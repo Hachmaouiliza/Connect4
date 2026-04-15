@@ -261,7 +261,15 @@ def meilleur_coup_ia(plat, historique, mode='ia_minimax', couleur=JAUNE):
     libres = [c for c in range(COLS) if plat[0][c] is None]
     if not libres: return None, "aucun"
 
-    # Vérifier bibliothèque d'ouvertures (réponse immédiate)
+    # 1. VICTOIRE IMMÉDIATE : si l'IA peut gagner en 1 coup, elle le fait
+    for col in libres:
+        temp = copy.deepcopy(plat)
+        jouer_coup(temp, col, couleur)
+        v, _ = verifier_victoire(temp)
+        if v == couleur:
+            return col, "victoire"
+
+    # 2. Vérifier bibliothèque d'ouvertures (réponse immédiate)
     seq = "".join(map(str, historique))
     if seq in OUVERTURES and OUVERTURES[seq] in libres:
         return OUVERTURES[seq], "ouverture"
