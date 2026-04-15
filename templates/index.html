@@ -248,8 +248,9 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
   <div class="mbox">
     <span class="micon" id="micon">🔴</span>
     <div class="mtitle" id="mtitle">Rouge gagne !</div>
-    <div class="msub">Partie sauvegardée en base de données</div>
-    <button class="mbtn-modal" onclick="nouvellePartie()">Rejouer !</button>
+    <div class="msub">Donne un nom à cette partie (optionnel)</div>
+    <input class="minput" id="nom-partie" placeholder="Ex: Tournoi BGA · Lisa vs Lysa" style="margin-bottom:14px;text-align:center;font-size:0.85rem">
+    <button class="mbtn-modal" onclick="nouvellePartieDepuisModal()">Rejouer !</button>
   </div>
 </div>
 
@@ -375,14 +376,7 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
         </div>
       </div>
 
-      <div class="wc">
-        <div class="slabel">🎮 Partie</div>
-        <button class="wbtn rb" onclick="nouvellePartie()">⟳ Nouvelle partie</button>
-        <div style="display:flex;gap:5px;margin-bottom:5px">
-          <button class="wbtn jb" style="margin:0;flex:1;font-size:0.72rem" onclick="sauvegarderPartie()">💾 Sauvegarder</button>
-          <button class="wbtn rb" style="margin:0;flex:1;font-size:0.72rem" onclick="abandonnerPartie()">🏳️ Abandonner</button>
-        </div>
-      </div>
+
 
       <div class="wc">
         <div class="slabel">🎯 Actions IA</div>
@@ -449,7 +443,8 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
       <div class="pred-card">
         <div class="slabel">Prédiction IA</div>
         <span class="pbadge incertaine" id="pbadge">⚪ Incertaine</span>
-        <div class="pred-expl" id="pred-expl">L'IA analyse la position actuelle depuis le point de vue de JAUNE.</div>
+        <div class="pred-expl" id="pred-expl">L'IA analyse la position actuelle.</div>
+        <button class="wbtn tb" style="margin:8px 0 0;padding:7px 10px;font-size:0.72rem" onclick="analyserMaintenant()">🔍 Analyser maintenant</button>
       </div>
 
       <div class="lmcard" id="lmove">— Aucun coup joué</div>
@@ -492,7 +487,7 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
         </div>
         <div class="bdd-table-wrap">
           <table>
-            <thead><tr><th>ID</th><th>Date</th><th>Vainqueur</th><th>Coups</th><th>Séquence</th><th>Actions</th></tr></thead>
+            <thead><tr><th>ID</th><th>Date</th><th>Vainqueur</th><th>Coups</th><th>Nom</th><th>Séquence</th><th>▶</th></tr></thead>
             <tbody id="bdd-tbody"></tbody>
           </table>
         </div>
@@ -532,7 +527,7 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
       <button class="pcbtn" id="sit-btn-e" onclick="setSitPC('effacer')">✕ Effacer</button>
 
       <div class="sit-section">Analyser</div>
-      <div style="font-size:0.68rem;color:rgba(255,248,240,0.45);margin-bottom:4px">Joueur qui joue</div>
+      <div style="font-size:0.68rem;color:rgba(255,248,240,0.45);margin-bottom:4px">Joueur qui joue (détecté auto par le nb de pions)</div>
       <select class="sit-select" id="sit-joueur">
         <option value="rouge">🔴 Rouge joue</option>
         <option value="jaune">🟡 Jaune joue</option>
@@ -546,7 +541,6 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
         <option value="6">6 — Expert</option>
       </select>
       <button class="abtn" onclick="analyserSituation()">🔍 Analyser</button>
-
       <div class="sit-result" id="sit-result">
         <div style="font-size:0.68rem;font-weight:800;color:rgba(0,188,212,0.7);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Meilleur coup</div>
         <div class="sit-result-coup" id="sit-coup">—</div>
@@ -554,8 +548,17 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
         <div style="font-size:0.78rem;font-weight:700;text-align:center;margin-top:6px" id="sit-pred"></div>
       </div>
 
+      <!-- SÉQUENCE DE VICTOIRE -->
+      <div id="sit-seq-result" style="display:none;background:linear-gradient(155deg,#001a2e,#002a40);border:2px solid rgba(0,188,212,0.4);border-radius:10px;padding:12px;margin-top:6px">
+        <div style="font-size:0.68rem;font-weight:800;color:rgba(0,188,212,0.7);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">🏆 Séquence vers la victoire</div>
+        <div id="sit-seq-label" style="font-size:0.8rem;font-weight:700;color:#4dd0e1;margin-bottom:8px"></div>
+        <div id="sit-seq-steps" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px"></div>
+        <button style="width:100%;padding:8px;border:none;border-radius:8px;background:linear-gradient(135deg,#1a6b3a,#0d4a27);color:white;font-family:'Fredoka One',cursive;font-size:0.85rem;cursor:pointer" onclick="rejouerSequenceCheat()">▶ Rejouer sur le plateau</button>
+      </div>
+
       <div class="sit-section" style="margin-top:8px">Actions</div>
-      <button class="ebtn" onclick="effacerSituation()">🗑️ Effacer le plateau</button>
+      <button class="abtn" style="margin-top:6px;background:linear-gradient(155deg,#7b1fa2,#4a0072);box-shadow:0 4px 0 #2a0042" id="btn-seq-victoire" onclick="trouverSequenceVictoire()">🏆 Trouver la victoire</button>
+      <button class="ebtn" style="margin-top:6px" onclick="effacerSituation()">🗑️ Effacer le plateau</button>
     </div>
 
     <div class="sit-board-wrap">
@@ -669,12 +672,99 @@ async function analyserSituation(){
     document.getElementById('sit-score').textContent='Source : '+d.source;
     const pt={victoire:'✅ Victoire probable',defaite:'❌ Défaite probable',nul:'🟡 Nul',incertaine:'⚪ Équilibré'};
     const pc={victoire:'#4dd0e1',defaite:'#ff6688',nul:'#ffc107',incertaine:'rgba(255,248,240,0.5)'};
-    const pred=d.prediction||'incertaine';
+    const pred=d.prediction?.prediction||d.prediction||'incertaine';
     document.getElementById('sit-pred').textContent=pt[pred]||pred;
     document.getElementById('sit-pred').style.color=pc[pred]||'white';
     document.getElementById('sit-result').style.display='block';
   }catch(e){alert('Erreur : '+e);}
-  btn.textContent='🔍 Analyser';btn.disabled=false;
+  btn.textContent='🔍 Analyser (meilleur coup)';btn.disabled=false;
+}
+
+let sitSeqGlobale = [];
+
+async function trouverSequenceVictoire(){
+  const joueur=document.getElementById('sit-joueur').value;
+  const prof=parseInt(document.getElementById('sit-prof').value);
+  const btn=document.getElementById('btn-seq-victoire');
+  btn.textContent='⏳ Recherche...';btn.disabled=true;
+  document.getElementById('sit-seq-result').style.display='none';
+  try{
+    const r=await fetch('/api/sequence_victoire',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({plateau:Sit.plateau,joueur,profondeur:prof})});
+    const d=await r.json();
+    if(d.sequence && d.sequence.length>0){
+      sitSeqGlobale=d.sequence;
+      const joueurNom=joueur==='rouge'?'Rouge':'Jaune';
+      document.getElementById('sit-seq-label').textContent=`${joueurNom} gagne dans ${d.sequence.length} coup${d.sequence.length>1?'s':''}`;
+      const stepsDiv=document.getElementById('sit-seq-steps');
+      stepsDiv.innerHTML='';
+      const adv=joueur==='rouge'?'jaune':'rouge';
+      let currentJoueur=joueur;
+      d.sequence.forEach((col,i)=>{
+        const step=document.createElement('div');
+        const isJoueur=currentJoueur===joueur;
+        step.style.cssText=`padding:4px 10px;border-radius:20px;font-family:'Fredoka One',cursive;font-size:0.78rem;cursor:pointer;transition:all .15s;`;
+        step.style.background=isJoueur?(joueur==='rouge'?'rgba(255,34,68,0.3)':'rgba(255,193,7,0.25)'):'rgba(255,255,255,0.08)';
+        step.style.border=isJoueur?(joueur==='rouge'?'1px solid rgba(255,34,68,0.6)':'1px solid rgba(255,193,7,0.5)'):'1px solid rgba(255,255,255,0.15)';
+        step.style.color=isJoueur?(joueur==='rouge'?'#ff8899':'#ffe066'):'rgba(255,248,240,0.5)';
+        step.textContent=`${i+1}. Col.${col+1}`;
+        stepsDiv.appendChild(step);
+        currentJoueur=currentJoueur==='rouge'?'jaune':'rouge';
+      });
+      document.getElementById('sit-seq-result').style.display='block';
+    } else {
+      document.getElementById('sit-seq-label').textContent='Aucune victoire trouvée à cette profondeur.';
+      document.getElementById('sit-seq-steps').innerHTML='<div style="font-size:0.72rem;color:rgba(255,248,240,0.4)">Essaie une profondeur plus grande.</div>';
+      document.getElementById('sit-seq-result').style.display='block';
+    }
+  }catch(e){alert('Erreur : '+e);}
+  btn.textContent='🏆 Trouver la victoire';btn.disabled=false;
+}
+
+function rejouerSequenceCheat(){
+  if(!sitSeqGlobale.length)return;
+  // Copier le plateau peint dans G et rejouer la séquence
+  G.plateau=JSON.parse(JSON.stringify(Sit.plateau));
+  G.historique=[];G.fin=false;G.locked=false;G.nbCoups=0;
+  // Détecter à qui de jouer
+  let r=0,j2=0;
+  for(let row=0;row<9;row++)for(let c=0;c<9;c++){if(G.plateau[row][c]==='rouge')r++;else if(G.plateau[row][c]==='jaune')j2++;}
+  G.joueur=r===j2?'rouge':'jaune';
+  buildBoard();refreshBoard([]);refreshTurn();
+  switchTab('jeu',document.querySelectorAll('.tab')[0]);
+  // Rejouer la séquence avec délai
+  let i=0;
+  const seqTimer=setInterval(()=>{
+    if(i>=sitSeqGlobale.length){clearInterval(seqTimer);G.locked=false;return;}
+    const col=sitSeqGlobale[i];
+    const jj=G.joueur;
+    for(let row=8;row>=0;row--){if(G.plateau[row][col]===null){G.plateau[row][col]=jj;G.historique.push(col);break;}}
+    G.joueur=jj==='rouge'?'jaune':'rouge';G.nbCoups++;
+    refreshLM(jj,col);refreshBoard([]);refreshTurn();
+    const v=verifierVictoireLocal(G.plateau);
+    if(v){clearInterval(seqTimer);G.fin=true;setTimeout(()=>showModal(v),400);return;}
+    i++;
+  },600);
+}
+
+// Analyse sur demande (bouton dans le panneau droit)
+async function analyserMaintenant(){
+  if(G.fin)return;
+  const btn=document.querySelector('[onclick="analyserMaintenant()"]');
+  btn.textContent='⏳...';btn.disabled=true;
+  try{
+    const r=await fetch('/api/suggestion',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({plateau:G.plateau,historique:G.historique,joueur:G.joueur})});
+    const d=await r.json();
+    G.poids=d.poids_colonnes;G.bestCol=d.meilleur_coup;
+    refreshW();
+    if(d.prediction)refreshPred(d.prediction);
+    document.getElementById('suggcard').style.display='block';
+    document.getElementById('suggcol').textContent=`Colonne ${d.meilleur_coup+1}`;
+    const srcLabels={'memoire':'base de données','minimax':'calcul minimax','ouverture':'bibliothèque','blocage':'blocage urgent'};
+    document.getElementById('suggsrc').textContent=srcLabels[d.source]||d.source;
+  }catch(e){}
+  btn.textContent='🔍 Analyser maintenant';btn.disabled=false;
 }
 
 // ══════════════════════
@@ -726,7 +816,6 @@ function refreshTurn(){
 }
 
 function refreshPred(predData){
-  // predData peut être un string (ancien format) ou un objet (nouveau format)
   let pred, coups, joueurPred;
   if(typeof predData === 'object' && predData !== null) {
     pred = predData.prediction;
@@ -741,14 +830,13 @@ function refreshPred(predData){
   const j = joueurPred === 'rouge' ? 'Rouge' : 'Jaune';
   const adv = joueurPred === 'rouge' ? 'Jaune' : 'Rouge';
   
-  let coupsRestants = '';
-  if(coups > 0) {
-    coupsRestants = ` dans ${coups} coup${coups > 1 ? 's' : ''}`;
-  }
-  
+  let coupsLabel = '';
+  if(coups === 1) coupsLabel = ' dans 1 coup !';
+  else if(coups > 1) coupsLabel = ` dans ~${coups} coups`;
+
   const m={
-    victoire:['🟢 ' + j + ' gagne' + coupsRestants,'victoire',`${j} a une victoire${coupsRestants}.`],
-    defaite: ['🔴 ' + adv + ' gagne' + coupsRestants,'defaite',`${adv} gagne${coupsRestants}.`],
+    victoire:['🟢 ' + j + ' gagne' + coupsLabel, 'victoire', `${j} a une victoire en vue${coupsLabel}.`],
+    defaite: ['🔴 ' + adv + ' gagne' + coupsLabel, 'defaite', `Attention ! ${adv} gagne${coupsLabel}.`],
     nul:     ['🟡 Match nul','nul','Le plateau est presque plein, aucun vainqueur en vue.'],
     incertaine:['⚪ Incertaine','incertaine','La partie est équilibrée. Tout peut basculer !']
   };
@@ -785,7 +873,43 @@ async function click(r,c){
 async function jouerCoup(col){
   if(G.fin||G.locked)return;
   G.locked=true;
-  const modeEnvoi = G.gameMode==='hvh' ? '2_joueurs' : G.iaMode;
+
+  // En HvH : afficher le pion immédiatement côté client AVANT l'appel serveur
+  const joueurAvant = G.joueur;
+  if(G.gameMode==='hvh'){
+    // Trouver la ligne où tombe le pion
+    let ligneAff=-1;
+    for(let r=8;r>=0;r--){if(G.plateau[r][col]===null){ligneAff=r;break;}}
+    if(ligneAff===-1){G.locked=false;return;} // colonne pleine
+    G.plateau[ligneAff][col]=joueurAvant;
+    G.joueur=joueurAvant==='rouge'?'jaune':'rouge';
+    G.nbCoups++;
+    refreshLM(joueurAvant,col);
+    refreshBoard([]);
+    refreshTurn();
+    // Afficher prediction incertaine en attendant le retour serveur
+    // pas de calcul lourd en HvH pour fluidité
+    G.historique.push(col);
+    const vainqueur_local = verifierVictoireLocal(G.plateau);
+    if(vainqueur_local){
+      G.fin=true;G.locked=false;
+      // Enregistrer en DB
+      fetch('/api/sauvegarder',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({sequence:G.historique.join(''),vainqueur:vainqueur_local})});
+      setTimeout(()=>showModal(vainqueur_local),400);refreshStats();
+      return;
+    }
+    G.locked=false;
+    // Prédiction async en arrière-plan (sans bloquer le jeu)
+    const platSnapshot=JSON.parse(JSON.stringify(G.plateau));
+    const prochainJoueur=G.joueur;
+    fetch('/api/jouer',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({plateau:platSnapshot,col:-99,joueur:prochainJoueur,historique:[...G.historique],mode:'2_joueurs',prediction_only:true})})
+    .then(r=>r.json()).then(d=>{if(d.prediction)refreshPred(d.prediction);}).catch(()=>{});
+    return;
+  }
+
+  const modeEnvoi = G.iaMode;
   const r=await fetch('/api/jouer',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({plateau:G.plateau,col,joueur:G.joueur,historique:G.historique,profondeur:G.profondeur,mode:modeEnvoi})});
   const d=await r.json();if(d.erreur){G.locked=false;return;}
@@ -797,10 +921,26 @@ async function jouerCoup(col){
     document.getElementById('tbanner').textContent='IA réfléchit...';
     document.getElementById('tbanner').className='turn-banner ia';
     const couleurIA=G.couleurHumain==='rouge'?'jaune':'rouge';
-    setTimeout(()=>jouerIA(couleurIA),500);
+    setTimeout(()=>jouerIA(couleurIA),300);
   } else {
     G.locked=false;
   }
+}
+
+// Vérification victoire côté client (pour HvH instantané)
+function verifierVictoireLocal(plat){
+  for(let r=0;r<9;r++) for(let c=0;c<9;c++){
+    const col=plat[r][c]; if(!col) continue;
+    for(const [dr,dc] of [[0,1],[1,0],[1,1],[1,-1]]){
+      let ok=true;
+      for(let i=1;i<4;i++){
+        const rr=r+i*dr,cc=c+i*dc;
+        if(rr<0||rr>=9||cc<0||cc>=9||plat[rr][cc]!==col){ok=false;break;}
+      }
+      if(ok) return col;
+    }
+  }
+  return null;
 }
 
 function laisserIAJouer(){
@@ -820,21 +960,36 @@ function laisserIAJouer(){
 async function jouerIA(couleur){
   if(G.fin)return;
   const c=couleur||G.joueur;
-  // CORRECTION : deep copy du plateau pour éviter mutation par référence
   const plateauCopy=JSON.parse(JSON.stringify(G.plateau));
   const historiqueCopy=[...G.historique];
   const r=await fetch('/api/ia',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({plateau:plateauCopy,historique:historiqueCopy,profondeur:G.profondeur,mode:G.iaMode,couleur:c})});
   const d=await r.json();
   if(d.erreur){G.locked=false;return;}
-  const jav=c; // la couleur qui vient de jouer = c, pas G.joueur (peut avoir changé)
+  const jav=c;
   G.plateau=d.plateau;
   G.historique=d.historique;
   G.nbCoups++;
   G.joueur=jav==='rouge'?'jaune':'rouge';
   refreshLM(jav,d.col_jouee);applyData(d);
   G.locked=false;
-  if(d.vainqueur){G.fin=true;setTimeout(()=>showModal(d.vainqueur),600);refreshStats();}
+  if(d.vainqueur){G.fin=true;setTimeout(()=>showModal(d.vainqueur),600);refreshStats();return;}
+  // Après le coup IA, afficher automatiquement les poids pour guider l'humain
+  if(G.gameMode==='hvi' && !G.fin){
+    const humainJoueur=G.joueur;
+    fetch('/api/suggestion',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({plateau:G.plateau,historique:G.historique,joueur:humainJoueur})})
+    .then(r=>r.json()).then(d=>{
+      if(d.poids_colonnes)G.poids=d.poids_colonnes;
+      if(d.meilleur_coup!==undefined)G.bestCol=d.meilleur_coup;
+      refreshW();
+      if(d.prediction)refreshPred(d.prediction);
+      document.getElementById('suggcard').style.display='block';
+      document.getElementById('suggcol').textContent=`Colonne ${d.meilleur_coup+1}`;
+      const srcLabels={'memoire':'base de données','minimax':'calcul minimax','ouverture':'bibliothèque','blocage':'blocage urgent'};
+      document.getElementById('suggsrc').textContent=srcLabels[d.source]||d.source;
+    }).catch(()=>{});
+  }
 }
 
 async function iaVsIa(){
@@ -1165,9 +1320,10 @@ function filtrerParties(){
 
 function renderBDDTable(){
   const filtered=bddParties.filter(p=>
-    p.vainqueur.includes(bddFilter)||
+    p.vainqueur.toLowerCase().includes(bddFilter)||
     String(p.id).includes(bddFilter)||
-    p.coups.includes(bddFilter)
+    p.coups.includes(bddFilter)||
+    (p.nom||'').toLowerCase().includes(bddFilter)
   );
   const total=filtered.length;
   const debut=bddPage*bddPageSize;
@@ -1175,18 +1331,18 @@ function renderBDDTable(){
 
   const tbody=document.getElementById('bdd-tbody');
   tbody.innerHTML=page.map(p=>`
-    <tr onclick="selectionnerPartie(${p.id},'${p.coups}','${p.vainqueur}')">
+    <tr onclick="selectionnerPartie(${p.id},'${p.coups}','${p.vainqueur}','${(p.nom||'').replace(/'/g,"\\'")}')">
       <td>#${p.id}</td>
       <td>${p.date}</td>
       <td><span class="tag ${p.vainqueur}">${p.vainqueur}</span></td>
       <td>${p.nb_coups}</td>
-      <td style="font-family:monospace;font-size:0.65rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.coups}</td>
+      <td style="font-size:0.7rem;color:rgba(255,248,240,0.55);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.nom||'—'}</td>
+      <td style="font-family:monospace;font-size:0.65rem;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.coups}</td>
       <td>
         <button class="pgbtn" style="padding:3px 8px;font-size:0.65rem" onclick="event.stopPropagation();replayBDDBtn('${p.coups}','${p.vainqueur}',${p.id})">▶</button>
       </td>
     </tr>`).join('');
 
-  // Pagination
   const nbPages=Math.ceil(total/bddPageSize);
   const pag=document.getElementById('pagination');
   pag.innerHTML=`
@@ -1198,11 +1354,12 @@ function renderBDDTable(){
   `;
 }
 
-function selectionnerPartie(id,seq,vainqueur){
-  bddSelected={id,seq,vainqueur};
+function selectionnerPartie(id,seq,vainqueur,nom){
+  bddSelected={id,seq,vainqueur,nom};
   document.getElementById('bdd-replay').classList.add('show');
   document.getElementById('bdd-sym-wrap').style.display='none';
-  document.getElementById('bdd-replay-title').textContent=`Partie #${id} — ${vainqueur}`;
+  const titre=nom?`Partie #${id} — ${nom}`:`Partie #${id} — ${vainqueur}`;
+  document.getElementById('bdd-replay-title').textContent=titre;
   document.getElementById('bdd-seq-info').textContent=`Séquence : ${seq}`;
   const plat=construirePlateau(seq);
   document.getElementById('bdd-mini-board-wrap').innerHTML=renderMiniBoard(plat,[]);
@@ -1267,7 +1424,26 @@ function showModal(v){
   const nom=typeof nomJoueur==='function'?nomJoueur(v):(v==='rouge'?'Rouge':'Jaune');
   document.getElementById('micon').textContent=v==='rouge'?'🔴':'🟡';
   document.getElementById('mtitle').textContent=`${nom} gagne !`;
+  document.getElementById('nom-partie').value='';
   document.getElementById('modal').classList.add('show');
+  // Sauvegarder automatiquement (sans nom pour l'instant)
+  const seq=G.historique.join('');
+  if(seq) fetch('/api/sauvegarder',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({sequence:seq,vainqueur:v,nom:''})}).then(()=>refreshStats());
+  // Stocker vainqueur pour sauvegarder avec nom au clic
+  document.getElementById('modal').dataset.vainqueur=v;
+}
+
+function nouvellePartieDepuisModal(){
+  const nomSaisi=document.getElementById('nom-partie').value.trim();
+  const vainqueur=document.getElementById('modal').dataset.vainqueur||'';
+  const seq=G.historique.join('');
+  if(nomSaisi && seq){
+    // Mettre à jour le nom en DB
+    fetch('/api/renommer_partie',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({sequence:seq,nom:nomSaisi,vainqueur})}).catch(()=>{});
+  }
+  nouvellePartie();
 }
 
 async function sauvegarderPartie(){
