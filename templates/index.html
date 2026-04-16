@@ -521,9 +521,9 @@ tr:hover td{background:rgba(255,255,255,0.04);cursor:pointer;}
       <div class="sit-section" style="margin-top:8px">Analyser</div>
       <select id="sit-joueur" style="display:none"><option value="rouge">rouge</option><option value="jaune">jaune</option></select>
       <select class="sit-select" id="sit-prof" style="margin-bottom:8px">
-        <option value="4">4 (rapide)</option>
+        <option value="4" selected>4 (rapide)</option>
         <option value="5">5 (normal)</option>
-        <option value="6" selected>6 (précis)</option>
+        <option value="6">6 (précis)</option>
         <option value="7">7 (profond)</option>
         <option value="8">8 (lent)</option>
       </select>
@@ -1518,13 +1518,21 @@ async function analyserComplet(){
     const winnerEl=document.getElementById('sit-winner');
     if(d.gagnant){
       const nom=d.gagnant==='rouge'?'Rouge':'Jaune';
-      const couleur=d.gagnant==='rouge'?'#ff8899':'#ffe066';
+      const couleur=d.gagnant==='rouge'?'#ff2244':'#ffc107';
+      const bg=d.gagnant==='rouge'?'rgba(255,34,68,0.2)':'rgba(255,193,7,0.15)';
+      const border=d.gagnant==='rouge'?'rgba(255,34,68,0.5)':'rgba(255,193,7,0.4)';
       const coupsLabel=d.coups_restants>0?' dans '+d.coups_restants+' coup'+(d.coups_restants>1?'s':''):'';
-      winnerEl.textContent='🟢 '+nom+' gagne'+coupsLabel+' !';
+      winnerEl.textContent='🏆 '+nom+' gagne'+coupsLabel+' !';
       winnerEl.style.color=couleur;
+      winnerEl.style.background=bg;
+      winnerEl.style.border='2px solid '+border;
+      winnerEl.style.borderRadius='10px';
+      winnerEl.style.padding='8px 12px';
     } else {
       winnerEl.textContent='⚪ Position incertaine';
       winnerEl.style.color='rgba(255,248,240,0.5)';
+      winnerEl.style.background='transparent';
+      winnerEl.style.border='none';
     }
 
     // Meilleur coup
